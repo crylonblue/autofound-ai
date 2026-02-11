@@ -1,7 +1,7 @@
 'use client'
 
 import { Canvas, useFrame } from '@react-three/fiber'
-import { useGLTF, Environment, Center, Bounds } from '@react-three/drei'
+import { useGLTF, Center, Bounds } from '@react-three/drei'
 import { Suspense, useRef } from 'react'
 import * as THREE from 'three'
 
@@ -60,11 +60,12 @@ export default function AgentModel({ modelUrl, className = '' }: AgentModelProps
           gl={{ alpha: true }}
           style={{ background: 'transparent', pointerEvents: 'none' }}
         >
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[5, 5, 5]} intensity={1} />
-          <directionalLight position={[-3, 3, -3]} intensity={0.3} />
+          <ambientLight intensity={1.2} />
+          <hemisphereLight args={['#ffffff', '#b0b0b0', 0.8]} />
+          <directionalLight position={[2, 4, 3]} intensity={0.4} />
+          <directionalLight position={[-2, 3, -2]} intensity={0.3} />
+          <directionalLight position={[0, -2, 3]} intensity={0.15} />
           <Model url={modelUrl} />
-          <Environment preset="city" />
         </Canvas>
       </Suspense>
     </div>
