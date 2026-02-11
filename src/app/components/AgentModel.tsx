@@ -9,20 +9,22 @@ function Model({ url }: { url: string }) {
   const { scene } = useGLTF(url)
   const groupRef = useRef<THREE.Group>(null)
 
-  // Make 100% matte — kill all reflections
+  // Toon/cel-shaded look — flat matte like stylized game characters
   scene.traverse((child) => {
     if ((child as THREE.Mesh).isMesh) {
       const mesh = child as THREE.Mesh
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      for (const mat of mats) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const m = mat as any
-        if (m.roughness !== undefined) m.roughness = 1
-        if (m.metalness !== undefined) m.metalness = 0
-        if (m.envMapIntensity !== undefined) m.envMapIntensity = 0
-        if (m.specularIntensity !== undefined) m.specularIntensity = 0
-        m.needsUpdate = true
-      }
+      const newMats = mats.map((mat) => {
+        const old = mat as THREE.MeshStandardMaterial
+        const toon = new THREE.MeshToonMaterial()
+        if (old.map) toon.map = old.map
+        if (old.color) toon.color = old.color.clone()
+        toon.side = old.side
+        toon.transparent = old.transparent
+        toon.opacity = old.opacity
+        return toon
+      })
+      mesh.material = newMats.length === 1 ? newMats[0] : newMats
     }
   })
 
