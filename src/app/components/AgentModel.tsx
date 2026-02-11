@@ -14,14 +14,15 @@ function Model({ url }: { url: string }) {
     if ((child as THREE.Mesh).isMesh) {
       const mesh = child as THREE.Mesh
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      mats.forEach((mat) => {
-        const m = mat as THREE.MeshStandardMaterial
+      for (const mat of mats) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const m = mat as any
         if (m.roughness !== undefined) m.roughness = 1
         if (m.metalness !== undefined) m.metalness = 0
-        m.envMapIntensity = 0
-        if (m.specularIntensity !== undefined) (m as unknown as Record<string, number>).specularIntensity = 0
+        if (m.envMapIntensity !== undefined) m.envMapIntensity = 0
+        if (m.specularIntensity !== undefined) m.specularIntensity = 0
         m.needsUpdate = true
-      })
+      }
     }
   })
 
