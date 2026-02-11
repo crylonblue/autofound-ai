@@ -9,6 +9,17 @@ function Model({ url }: { url: string }) {
   const { scene } = useGLTF(url)
   const groupRef = useRef<THREE.Group>(null)
 
+  // Make materials matte
+  scene.traverse((child) => {
+    if ((child as THREE.Mesh).isMesh) {
+      const mesh = child as THREE.Mesh
+      if (mesh.material && 'roughness' in mesh.material) {
+        (mesh.material as THREE.MeshStandardMaterial).roughness = 1
+        ;(mesh.material as THREE.MeshStandardMaterial).metalness = 0
+      }
+    }
+  })
+
   // Auto-rotate
   useFrame((_, delta) => {
     if (groupRef.current) {
