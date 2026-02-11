@@ -2,53 +2,63 @@
 
 import { Canvas, useFrame } from '@react-three/fiber'
 import { useGLTF, useAnimations, Center, Bounds } from '@react-three/drei'
-import { Suspense, useRef, useEffect } from 'react'
+import { Suspense, useRef, useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 
 function Model({ url }: { url: string }) {
   const { scene, animations } = useGLTF(url)
+  const clonedScene = useMemo(() => scene.clone(true), [scene])
   const groupRef = useRef<THREE.Group>(null)
-  const { actions } = useAnimations(animations, groupRef)
+  const mixerRef = useRef<THREE.AnimationMixer | null>(null)
 
-  // Play the first animation if available
+  const hasAnimation = animations.length > 0
+
+  // Set up animation mixer manually for better control
   useEffect(() => {
-    if (actions && Object.keys(actions).length > 0) {
-      const firstAction = Object.values(actions)[0]
-      if (firstAction) {
-        firstAction.reset().fadeIn(0.5).play()
-      }
+    if (hasAnimation && clonedScene) {
+      const mixer = new THREE.AnimationMixer(clonedScene)
+      mixerRef.current = mixer
+      const clip = animations[0]
+      const action = mixer.clipAction(clip)
+      action.reset().play()
+      return () => { mixer.stopAllAction() }
     }
-  }, [actions])
+  }, [hasAnimation, animations, clonedScene])
 
   // Matte materials
-  scene.traverse((child) => {
-    if ((child as THREE.Mesh).isMesh) {
-      const mesh = child as THREE.Mesh
-      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      mats.forEach((mat) => {
-        if ((mat as THREE.MeshStandardMaterial).roughness !== undefined) {
-          const m = mat as THREE.MeshStandardMaterial
-          m.roughness = 1
-          m.metalness = 0
-          m.envMapIntensity = 0
-        }
-      })
-    }
-  })
+  useEffect(() => {
+    clonedScene.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+        mats.forEach((mat) => {
+          if ((mat as THREE.MeshStandardMaterial).roughness !== undefined) {
+            const m = mat as THREE.MeshStandardMaterial
+            m.roughness = 1
+            m.metalness = 0
+            m.envMapIntensity = 0
+          }
+        })
+      }
+    })
+  }, [clonedScene])
 
-  // Auto-rotate only if no animation
-  const hasAnimation = animations.length > 0
   useFrame((_, delta) => {
+    // Update animation mixer
+    if (mixerRef.current) {
+      mixerRef.current.update(delta)
+    }
+    // Auto-rotate only if no animation
     if (groupRef.current && !hasAnimation) {
       groupRef.current.rotation.y += delta * 0.8
     }
   })
 
   return (
-    <Bounds fit clip observe margin={1.2}>
+    <Bounds fit clip observe margin={1.1}>
       <Center>
         <group ref={groupRef}>
-          <primitive object={scene} />
+          <primitive object={clonedScene} />
         </group>
       </Center>
     </Bounds>
@@ -73,7 +83,7 @@ export default function AgentModel({ modelUrl, className = '' }: AgentModelProps
     <div className={`relative ${className}`} style={{ width: 200, height: 200 }}>
       <Suspense fallback={<LoadingSpinner />}>
         <Canvas
-          camera={{ position: [0, 0.3, 3], fov: 35 }}
+          camera={{ position: [0, 0, 4], fov: 30 }}
           gl={{ alpha: true }}
           style={{ background: 'transparent', pointerEvents: 'none' }}
         >
