@@ -9,24 +9,19 @@ function Model({ url }: { url: string }) {
   const { scene } = useGLTF(url)
   const groupRef = useRef<THREE.Group>(null)
 
-  // Replace all materials with fully matte (no specular at all)
+  // Make 100% matte — kill all reflections
   scene.traverse((child) => {
     if ((child as THREE.Mesh).isMesh) {
       const mesh = child as THREE.Mesh
-      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      mesh.material = materials.map((mat) => {
-        const lambert = new THREE.MeshLambertMaterial()
-        if ('map' in mat && mat.map) lambert.map = mat.map as THREE.Texture
-        if ('color' in mat && mat.color) lambert.color = (mat.color as THREE.Color).clone()
-        if ('transparent' in mat) lambert.transparent = mat.transparent
-        if ('opacity' in mat) lambert.opacity = mat.opacity as number
-        if ('alphaMap' in mat && mat.alphaMap) lambert.alphaMap = mat.alphaMap as THREE.Texture
-        if ('side' in mat) lambert.side = mat.side
-        return lambert
+      const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      mats.forEach((mat) => {
+        const m = mat as THREE.MeshStandardMaterial
+        if (m.roughness !== undefined) m.roughness = 1
+        if (m.metalness !== undefined) m.metalness = 0
+        m.envMapIntensity = 0
+        if (m.specularIntensity !== undefined) (m as unknown as Record<string, number>).specularIntensity = 0
+        m.needsUpdate = true
       })
-      if (!Array.isArray(mesh.material) && materials.length === 1) {
-        mesh.material = (mesh.material as THREE.MeshLambertMaterial[])[0]
-      }
     }
   })
 
