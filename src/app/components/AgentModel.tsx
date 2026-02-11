@@ -1,12 +1,30 @@
 'use client'
 
-import { Canvas } from '@react-three/fiber'
-import { OrbitControls, useGLTF, Environment } from '@react-three/drei'
-import { Suspense } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
+import { useGLTF, Environment, Center, Bounds } from '@react-three/drei'
+import { Suspense, useRef } from 'react'
+import * as THREE from 'three'
 
 function Model({ url }: { url: string }) {
   const { scene } = useGLTF(url)
-  return <primitive object={scene} scale={1} position={[0, -0.8, 0]} />
+  const groupRef = useRef<THREE.Group>(null)
+
+  // Auto-rotate
+  useFrame((_, delta) => {
+    if (groupRef.current) {
+      groupRef.current.rotation.y += delta * 0.8
+    }
+  })
+
+  return (
+    <Bounds fit clip observe margin={1.2}>
+      <Center>
+        <group ref={groupRef}>
+          <primitive object={scene} />
+        </group>
+      </Center>
+    </Bounds>
+  )
 }
 
 function LoadingSpinner() {
@@ -27,21 +45,14 @@ export default function AgentModel({ modelUrl, className = '' }: AgentModelProps
     <div className={`relative ${className}`} style={{ width: 200, height: 200 }}>
       <Suspense fallback={<LoadingSpinner />}>
         <Canvas
-          camera={{ position: [0, 0.5, 2.5], fov: 40 }}
+          camera={{ position: [0, 0.3, 3], fov: 35 }}
           gl={{ alpha: true }}
-          style={{ background: 'transparent' }}
+          style={{ background: 'transparent', pointerEvents: 'none' }}
         >
-          <ambientLight intensity={0.5} />
+          <ambientLight intensity={0.6} />
           <directionalLight position={[5, 5, 5]} intensity={1} />
+          <directionalLight position={[-3, 3, -3]} intensity={0.3} />
           <Model url={modelUrl} />
-          <OrbitControls
-            autoRotate
-            autoRotateSpeed={2}
-            enableZoom={false}
-            enablePan={false}
-            minPolarAngle={Math.PI / 3}
-            maxPolarAngle={Math.PI / 2}
-          />
           <Environment preset="city" />
         </Canvas>
       </Suspense>
