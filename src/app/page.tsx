@@ -121,7 +121,7 @@ export default function Home() {
         {/* Background image — behind text, blended into bg */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <img
-            src="/images/hero-workplace.png"
+            src="/images/hero-workplace.jpg"
             alt=""
             className="w-full max-w-5xl opacity-30 object-contain"
             style={{
