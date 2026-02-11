@@ -3,15 +3,41 @@
 :root {
   --color-bg: #0a0a0a;
   --color-fg: #ededed;
-  --color-accent: #6366f1;
-  --color-accent-light: #818cf8;
+  --color-accent: #3b82f6;
+  --color-accent-light: #60a5fa;
   --color-muted: #a1a1aa;
-  --color-card: #18181b;
-  --color-border: #27272a;
+  --color-card: #111111;
+  --color-border: #222222;
 }
 
 body {
   background: var(--color-bg);
   color: var(--color-fg);
-  font-family: system-ui, -apple-system, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out both;
+}
+
+.animate-delay-100 { animation-delay: 0.1s; }
+.animate-delay-200 { animation-delay: 0.2s; }
+.animate-delay-300 { animation-delay: 0.3s; }
+.animate-delay-400 { animation-delay: 0.4s; }
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); }
+  50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.3); }
+}
+
+.glow {
+  animation: pulse-glow 3s ease-in-out infinite;
 }

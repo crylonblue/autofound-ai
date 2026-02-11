@@ -2,21 +2,21 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "autofound.ai — Company Formation on Autopilot",
+  title: "autofound.ai — Build Your Company with AI Employees",
   description:
-    "Fully AI-powered company formation. No humans in the loop. Incorporate in the US, EU, or UK in minutes, not weeks.",
+    "Hire AI agents, define org charts, and let them execute real work. Your first employees are AI.",
   openGraph: {
-    title: "autofound.ai — Company Formation on Autopilot",
+    title: "autofound.ai — Build Your Company with AI Employees",
     description:
-      "Fully AI-powered company formation. No humans in the loop. Incorporate in minutes.",
+      "Hire AI agents, define org charts, and let them execute real work.",
     url: "https://autofound.ai",
     siteName: "autofound.ai",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "autofound.ai — Company Formation on Autopilot",
-    description: "Fully AI-powered company formation. No humans in the loop.",
+    title: "autofound.ai — Build Your Company with AI Employees",
+    description: "Hire AI agents, define org charts, and let them execute real work.",
   },
 };
 
