@@ -117,8 +117,20 @@ export default function Home() {
       </nav>
 
       {/* ─── Hero ─── */}
-      <section className="pt-40 pb-24 px-6">
-        <div className="max-w-4xl mx-auto text-center">
+      <section className="relative pt-40 pb-24 px-6 overflow-hidden min-h-[90vh] flex items-center">
+        {/* Background image — behind text, blended into bg */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <img
+            src="/images/hero-workplace.png"
+            alt=""
+            className="w-full max-w-5xl opacity-30 object-contain"
+            style={{
+              maskImage: 'radial-gradient(ellipse 70% 70% at center, black 30%, transparent 80%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 70% 70% at center, black 30%, transparent 80%)',
+            }}
+          />
+        </div>
+        <div className="max-w-4xl mx-auto text-center relative z-10">
           <h1 className="text-5xl sm:text-7xl font-bold tracking-tight leading-[1.1] animate-fade-in-up">
             Your first employees
             <br />
@@ -134,13 +146,6 @@ export default function Home() {
           <p className="mt-4 text-sm text-zinc-600 animate-fade-in-up animate-delay-300">
             Free to start · No credit card required · BYOK
           </p>
-          <div className="mt-16 animate-fade-in-up animate-delay-300">
-            <img
-              src="/images/hero-workplace.png"
-              alt="AI CEO and Developer agents working together in a futuristic office"
-              className="mx-auto rounded-2xl border border-white/10 shadow-2xl shadow-blue-500/10 max-w-3xl w-full"
-            />
-          </div>
         </div>
       </section>
 
