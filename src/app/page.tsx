@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, FormEvent } from "react";
+import LazyAgentModel from "./components/LazyAgentModel";
 
 /* ───────────────────────── helpers ───────────────────────── */
 
@@ -72,14 +73,14 @@ const steps = [
 ];
 
 const agents = [
-  { emoji: "👔", role: "CEO Agent", desc: "Reviews reports, sets priorities, delegates across departments.", task: "\"Summarize this week's KPIs and assign Q2 OKRs.\"" },
-  { emoji: "✍️", role: "Content Writer", desc: "Writes blog posts, landing pages, newsletters, and social copy.", task: "\"Write a 1,500-word SEO article about AI automation.\"" },
-  { emoji: "🔍", role: "SEO Specialist", desc: "Runs audits, researches keywords, optimizes content.", task: "\"Audit our top 10 pages and suggest improvements.\"" },
-  { emoji: "📞", role: "Sales Agent", desc: "Researches leads, sends outreach, updates your CRM.", task: "\"Find 50 SaaS founders in Berlin and draft cold emails.\"" },
-  { emoji: "📊", role: "Bookkeeper", desc: "Categorizes expenses, generates invoices, flags anomalies.", task: "\"Reconcile last month's transactions and export a P&L.\"" },
-  { emoji: "🧑‍💼", role: "HR Manager", desc: "Monitors agent performance, spawns new agents when workload grows.", task: "\"Spin up two more writers — content backlog is growing.\"" },
-  { emoji: "💻", role: "Dev Agent", desc: "Writes code, runs tests, deploys to staging or production.", task: "\"Fix the auth bug in PR #42 and deploy to staging.\"" },
-  { emoji: "🎧", role: "Support Agent", desc: "Triages tickets, drafts replies, escalates complex issues.", task: "\"Respond to all open Zendesk tickets from today.\"" },
+  { emoji: "👔", role: "CEO Agent", desc: "Reviews reports, sets priorities, delegates across departments.", task: "\"Summarize this week's KPIs and assign Q2 OKRs.\"", model: "/models/ceo.glb" },
+  { emoji: "✍️", role: "Content Writer", desc: "Writes blog posts, landing pages, newsletters, and social copy.", task: "\"Write a 1,500-word SEO article about AI automation.\"", model: "/models/writer.glb" },
+  { emoji: "🔍", role: "SEO Specialist", desc: "Runs audits, researches keywords, optimizes content.", task: "\"Audit our top 10 pages and suggest improvements.\"", model: "/models/seo.glb" },
+  { emoji: "📞", role: "Sales Agent", desc: "Researches leads, sends outreach, updates your CRM.", task: "\"Find 50 SaaS founders in Berlin and draft cold emails.\"", model: "/models/sales.glb" },
+  { emoji: "📊", role: "Bookkeeper", desc: "Categorizes expenses, generates invoices, flags anomalies.", task: "\"Reconcile last month's transactions and export a P&L.\"", model: "/models/bookkeeper.glb" },
+  { emoji: "🧑‍💼", role: "HR Manager", desc: "Monitors agent performance, spawns new agents when workload grows.", task: "\"Spin up two more writers — content backlog is growing.\"", model: "/models/hr.glb" },
+  { emoji: "💻", role: "Dev Agent", desc: "Writes code, runs tests, deploys to staging or production.", task: "\"Fix the auth bug in PR #42 and deploy to staging.\"", model: "/models/dev.glb" },
+  { emoji: "🎧", role: "Support Agent", desc: "Triages tickets, drafts replies, escalates complex issues.", task: "\"Respond to all open Zendesk tickets from today.\"", model: "/models/support.glb" },
 ];
 
 const pricing = [
@@ -213,7 +214,9 @@ export default function Home() {
                 key={a.role}
                 className="p-5 rounded-xl border border-white/5 bg-white/[0.02] hover:border-blue-500/30 hover:bg-white/[0.04] transition group"
               >
-                <div className="text-3xl mb-3">{a.emoji}</div>
+                <div className="flex justify-center mb-3">
+                  <LazyAgentModel modelUrl={a.model} />
+                </div>
                 <h3 className="font-semibold text-white">{a.role}</h3>
                 <p className="mt-1 text-sm text-zinc-400">{a.desc}</p>
                 <p className="mt-3 text-xs text-zinc-600 italic group-hover:text-zinc-500 transition">
