@@ -1,36 +1,45 @@
 'use client'
 
 import { Canvas, useFrame } from '@react-three/fiber'
-import { useGLTF, Center, Bounds } from '@react-three/drei'
-import { Suspense, useRef } from 'react'
+import { useGLTF, useAnimations, Center, Bounds } from '@react-three/drei'
+import { Suspense, useRef, useEffect } from 'react'
 import * as THREE from 'three'
 
 function Model({ url }: { url: string }) {
-  const { scene } = useGLTF(url)
+  const { scene, animations } = useGLTF(url)
   const groupRef = useRef<THREE.Group>(null)
+  const { actions } = useAnimations(animations, groupRef)
 
-  // Toon/cel-shaded look — flat matte like stylized game characters
+  // Play the first animation if available
+  useEffect(() => {
+    if (actions && Object.keys(actions).length > 0) {
+      const firstAction = Object.values(actions)[0]
+      if (firstAction) {
+        firstAction.reset().fadeIn(0.5).play()
+      }
+    }
+  }, [actions])
+
+  // Matte materials
   scene.traverse((child) => {
     if ((child as THREE.Mesh).isMesh) {
       const mesh = child as THREE.Mesh
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-      const newMats = mats.map((mat) => {
-        const old = mat as THREE.MeshStandardMaterial
-        const toon = new THREE.MeshToonMaterial()
-        if (old.map) toon.map = old.map
-        if (old.color) toon.color = old.color.clone()
-        toon.side = old.side
-        toon.transparent = old.transparent
-        toon.opacity = old.opacity
-        return toon
+      mats.forEach((mat) => {
+        if ((mat as THREE.MeshStandardMaterial).roughness !== undefined) {
+          const m = mat as THREE.MeshStandardMaterial
+          m.roughness = 1
+          m.metalness = 0
+          m.envMapIntensity = 0
+        }
       })
-      mesh.material = newMats.length === 1 ? newMats[0] : newMats
     }
   })
 
-  // Auto-rotate
+  // Auto-rotate only if no animation
+  const hasAnimation = animations.length > 0
   useFrame((_, delta) => {
-    if (groupRef.current) {
+    if (groupRef.current && !hasAnimation) {
       groupRef.current.rotation.y += delta * 0.8
     }
   })
