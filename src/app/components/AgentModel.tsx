@@ -13,14 +13,18 @@ function Model({ url }: { url: string }) {
 
   const hasAnimation = gltf.animations.length > 0
 
-  // Compute bounding box once
-  const { yOffset, centerX, centerZ, height } = useMemo(() => {
+  // Compute bounding box to center model
+  const { centerX, centerY, centerZ, size } = useMemo(() => {
     const bbox = new THREE.Box3().setFromObject(gltf.scene)
+    const center = new THREE.Vector3()
+    bbox.getCenter(center)
+    const s = new THREE.Vector3()
+    bbox.getSize(s)
     return {
-      yOffset: -bbox.min.y,
-      centerX: -(bbox.min.x + bbox.max.x) / 2,
-      centerZ: -(bbox.min.z + bbox.max.z) / 2,
-      height: bbox.max.y - bbox.min.y,
+      centerX: -center.x,
+      centerY: -center.y,
+      centerZ: -center.z,
+      size: Math.max(s.x, s.y, s.z),
     }
   }, [gltf.scene])
 
@@ -49,15 +53,13 @@ function Model({ url }: { url: string }) {
     })
   }, [gltf.scene])
 
-  // Auto-fit camera to model
+  // Auto-fit camera
   useEffect(() => {
-    const midY = height / 2
-    // Position camera to see the full model with some padding
-    const distance = height * 1.8
-    camera.position.set(0, midY, distance)
-    camera.lookAt(0, midY, 0)
+    const distance = size * 2
+    camera.position.set(0, 0, distance)
+    camera.lookAt(0, 0, 0)
     camera.updateProjectionMatrix()
-  }, [camera, height])
+  }, [camera, size])
 
   // Auto-rotate only if no animation
   useFrame((_, delta) => {
@@ -67,12 +69,8 @@ function Model({ url }: { url: string }) {
   })
 
   return (
-    <group ref={groupRef} position={[centerX, 0, centerZ]}>
-      <primitive object={gltf.scene} position={[0, yOffset, 0]} />
-      <gridHelper
-        args={[4, 12, '#3b82f6', '#1e3a5f']}
-        position={[0, 0, 0]}
-      />
+    <group ref={groupRef}>
+      <primitive object={gltf.scene} position={[centerX, centerY, centerZ]} />
     </group>
   )
 }
