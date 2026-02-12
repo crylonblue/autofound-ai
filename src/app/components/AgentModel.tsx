@@ -13,25 +13,25 @@ function Model({ url }: { url: string }) {
   const { camera } = useThree()
   const fitted = useRef(false)
 
-  // Complete matte materials — replace with Lambert (no specular at all)
+  // Complete matte materials
   useMemo(() => {
     clonedScene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh
         const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-        mesh.material = mats.map((mat) => {
-          const lambert = new THREE.MeshLambertMaterial({
-            map: (mat as THREE.MeshStandardMaterial).map || null,
-            color: (mat as THREE.MeshStandardMaterial).color,
-            transparent: mat.transparent,
-            opacity: mat.opacity,
-            side: mat.side,
-          })
-          return lambert
+        mats.forEach((mat) => {
+          if ('roughness' in mat) {
+            const m = mat as THREE.MeshStandardMaterial
+            m.roughness = 1
+            m.metalness = 0
+            m.envMapIntensity = 0
+            m.normalMap = null
+            m.metalnessMap = null
+            m.roughnessMap = null
+            m.aoMap = null
+            m.needsUpdate = true
+          }
         })
-        if (!Array.isArray(mesh.material) && mats.length === 1) {
-          mesh.material = (mesh.material as THREE.Material[])[0]
-        }
       }
     })
   }, [clonedScene])
