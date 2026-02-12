@@ -6,6 +6,35 @@ import LazyAgentModel from "./components/LazyAgentModel";
 
 /* ───────────────────────── components ───────────────────────── */
 
+function OrgNode({ icon, label, sub, color, mini, pulse, glow = true }: {
+  icon: string; label: string; sub?: string; color: string; mini?: boolean; pulse?: boolean; glow?: boolean;
+}) {
+  return (
+    <div className={`relative group ${mini ? 'w-16' : ''}`}>
+      {pulse && <div className="absolute -inset-1 rounded-xl opacity-20 animate-pulse" style={{ background: color }} />}
+      <div
+        className={`relative rounded-xl border text-center transition-all duration-300 hover:scale-105 ${
+          mini ? 'px-2 py-2 bg-white/[0.03]' : 'px-4 py-3 bg-white/[0.04]'
+        }`}
+        style={{
+          borderColor: color + '30',
+          boxShadow: glow ? `0 0 20px ${color}15` : 'none',
+        }}
+      >
+        <div className={mini ? 'text-lg' : 'text-2xl mb-1'}>{icon}</div>
+        <div className={`font-semibold text-white ${mini ? 'text-[10px]' : 'text-sm'}`}>{label}</div>
+        {sub && <div className="text-[10px] text-zinc-500 mt-0.5">{sub}</div>}
+        {!mini && (
+          <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
+            <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+            active
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function WaitlistForm({ className = "" }: { className?: string }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "joined" | "already" | "error">("idle");
@@ -195,28 +224,50 @@ export default function Home() {
             Define hierarchy, communication channels, and escalation paths.
             Agents know who to report to and who to delegate to.
           </p>
-          <div className="inline-block text-left font-mono text-sm sm:text-base leading-relaxed glow rounded-2xl border border-white/10 bg-white/[0.02] px-8 sm:px-12 py-10">
-            <div className="text-zinc-400">
-              <span className="text-zinc-300">{"            "}👤 You</span> <span className="text-zinc-600">(Founder)</span>
-              <br />
-              {"             "}│
-              <br />
-              <span className="text-blue-400">{"          "}🤖 CEO Agent</span>
-              <br />
-              {"        "}┌──────┼──────┐
-              <br />
-              <span className="text-emerald-400">{"     "}🤖 CMO</span>{"   "}
-              <span className="text-amber-400">🤖 CFO</span>{"   "}
-              <span className="text-purple-400">🤖 CTO</span>
-              <br />
-              {"     "}┌─┴─┐{"    "}│{"    "}┌─┴─┐
-              <br />
-              {"   "}
-              <span className="text-emerald-400/70">✍️ Writer</span>{" "}
-              <span className="text-emerald-400/70">🔍 SEO</span>{"  "}
-              <span className="text-amber-400/70">📊 Books</span>{"  "}
-              <span className="text-purple-400/70">💻 Dev</span>{" "}
-              <span className="text-purple-400/70">🧪 QA</span>
+          {/* Visual Org Chart */}
+          <div className="relative max-w-3xl mx-auto">
+            {/* SVG Connection Lines */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
+              {/* Founder to CEO */}
+              <line x1="50%" y1="52" x2="50%" y2="100" stroke="#3b82f6" strokeWidth="2" strokeOpacity="0.4" />
+              {/* CEO to CMO/CFO/CTO */}
+              <line x1="50%" y1="152" x2="16.6%" y2="200" stroke="#10b981" strokeWidth="2" strokeOpacity="0.3" />
+              <line x1="50%" y1="152" x2="50%" y2="200" stroke="#f59e0b" strokeWidth="2" strokeOpacity="0.3" />
+              <line x1="50%" y1="152" x2="83.3%" y2="200" stroke="#a855f7" strokeWidth="2" strokeOpacity="0.3" />
+              {/* CMO to Writer/SEO */}
+              <line x1="16.6%" y1="252" x2="8.3%" y2="300" stroke="#10b981" strokeWidth="1.5" strokeOpacity="0.2" />
+              <line x1="16.6%" y1="252" x2="25%" y2="300" stroke="#10b981" strokeWidth="1.5" strokeOpacity="0.2" />
+              {/* CFO to Books */}
+              <line x1="50%" y1="252" x2="50%" y2="300" stroke="#f59e0b" strokeWidth="1.5" strokeOpacity="0.2" />
+              {/* CTO to Dev/QA */}
+              <line x1="83.3%" y1="252" x2="75%" y2="300" stroke="#a855f7" strokeWidth="1.5" strokeOpacity="0.2" />
+              <line x1="83.3%" y1="252" x2="91.6%" y2="300" stroke="#a855f7" strokeWidth="1.5" strokeOpacity="0.2" />
+            </svg>
+
+            {/* Row 1: Founder */}
+            <div className="flex justify-center mb-6 relative z-10">
+              <OrgNode icon="👤" label="You" sub="Founder" color="#ffffff" glow={false} />
+            </div>
+
+            {/* Row 2: CEO */}
+            <div className="flex justify-center mb-6 relative z-10">
+              <OrgNode icon="👔" label="CEO Agent" sub="Strategic Oversight" color="#3b82f6" pulse />
+            </div>
+
+            {/* Row 3: C-Suite */}
+            <div className="grid grid-cols-3 gap-4 mb-6 relative z-10">
+              <div className="flex justify-center"><OrgNode icon="📣" label="CMO" sub="Marketing" color="#10b981" /></div>
+              <div className="flex justify-center"><OrgNode icon="💰" label="CFO" sub="Finance" color="#f59e0b" /></div>
+              <div className="flex justify-center"><OrgNode icon="⚙️" label="CTO" sub="Engineering" color="#a855f7" /></div>
+            </div>
+
+            {/* Row 4: Workers */}
+            <div className="grid grid-cols-5 gap-2 relative z-10">
+              <div className="flex justify-center"><OrgNode icon="✍️" label="Writer" color="#10b981" mini /></div>
+              <div className="flex justify-center"><OrgNode icon="🔍" label="SEO" color="#10b981" mini /></div>
+              <div className="flex justify-center"><OrgNode icon="📊" label="Books" color="#f59e0b" mini /></div>
+              <div className="flex justify-center"><OrgNode icon="💻" label="Dev" color="#a855f7" mini /></div>
+              <div className="flex justify-center"><OrgNode icon="🧪" label="QA" color="#a855f7" mini /></div>
             </div>
           </div>
         </div>
