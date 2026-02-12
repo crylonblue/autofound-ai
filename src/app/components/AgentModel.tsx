@@ -1,16 +1,28 @@
 'use client'
 
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useGLTF, useAnimations } from '@react-three/drei'
-import { Suspense, useRef, useEffect } from 'react'
+import { Suspense, useRef, useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 
 function Model({ url }: { url: string }) {
   const gltf = useGLTF(url)
   const groupRef = useRef<THREE.Group>(null)
   const { actions, names } = useAnimations(gltf.animations, groupRef)
+  const { camera } = useThree()
 
   const hasAnimation = gltf.animations.length > 0
+
+  // Compute bounding box once
+  const { yOffset, centerX, centerZ, height } = useMemo(() => {
+    const bbox = new THREE.Box3().setFromObject(gltf.scene)
+    return {
+      yOffset: -bbox.min.y,
+      centerX: -(bbox.min.x + bbox.max.x) / 2,
+      centerZ: -(bbox.min.z + bbox.max.z) / 2,
+      height: bbox.max.y - bbox.min.y,
+    }
+  }, [gltf.scene])
 
   // Play first animation
   useEffect(() => {
@@ -37,6 +49,16 @@ function Model({ url }: { url: string }) {
     })
   }, [gltf.scene])
 
+  // Auto-fit camera to model
+  useEffect(() => {
+    const midY = height / 2
+    // Position camera to see the full model with some padding
+    const distance = height * 1.8
+    camera.position.set(0, midY, distance)
+    camera.lookAt(0, midY, 0)
+    camera.updateProjectionMatrix()
+  }, [camera, height])
+
   // Auto-rotate only if no animation
   useFrame((_, delta) => {
     if (groupRef.current && !hasAnimation) {
@@ -44,14 +66,8 @@ function Model({ url }: { url: string }) {
     }
   })
 
-  // Compute bounding box to anchor model at ground level
-  const bbox = new THREE.Box3().setFromObject(gltf.scene)
-  const yOffset = -bbox.min.y  // shift feet to y=0
-  const height = bbox.max.y - bbox.min.y
-  const centerX = -(bbox.min.x + bbox.max.x) / 2
-
   return (
-    <group ref={groupRef} position={[centerX, 0, 0]}>
+    <group ref={groupRef} position={[centerX, 0, centerZ]}>
       <primitive object={gltf.scene} position={[0, yOffset, 0]} />
       <gridHelper
         args={[4, 12, '#3b82f6', '#1e3a5f']}
@@ -79,7 +95,7 @@ export default function AgentModel({ modelUrl, className = '' }: AgentModelProps
     <div className={`relative ${className}`} style={{ width: 200, height: 200 }}>
       <Suspense fallback={<LoadingSpinner />}>
         <Canvas
-          camera={{ position: [0, 1, 4], fov: 35 }}
+          camera={{ fov: 35 }}
           gl={{ alpha: true }}
           style={{ background: 'transparent', pointerEvents: 'none' }}
         >
