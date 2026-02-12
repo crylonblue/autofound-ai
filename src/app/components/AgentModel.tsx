@@ -1,7 +1,7 @@
 'use client'
 
 import { Canvas, useFrame } from '@react-three/fiber'
-import { useGLTF, useAnimations, Center, Bounds } from '@react-three/drei'
+import { useGLTF, useAnimations, Center, Bounds, Grid } from '@react-three/drei'
 import { Suspense, useRef, useEffect } from 'react'
 import * as THREE from 'three'
 
@@ -83,6 +83,19 @@ export default function AgentModel({ modelUrl, className = '' }: AgentModelProps
           <directionalLight position={[-2, 3, -2]} intensity={0.3} />
           <directionalLight position={[0, -2, 3]} intensity={0.15} />
           <Model url={modelUrl} />
+          <Grid
+            position={[0, -1, 0]}
+            args={[10, 10]}
+            cellSize={0.4}
+            cellThickness={0.5}
+            cellColor="#3b82f6"
+            sectionSize={1.2}
+            sectionThickness={1}
+            sectionColor="#1e40af"
+            fadeDistance={6}
+            fadeStrength={1.5}
+            infiniteGrid
+          />
         </Canvas>
       </Suspense>
     </div>
