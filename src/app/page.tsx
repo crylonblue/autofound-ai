@@ -223,8 +223,10 @@ export default function Home() {
       </section>
 
       {/* ─── Agent templates ─── */}
-      <section id="agents" className="py-24 px-6 border-t border-white/5">
-        <div className="max-w-6xl mx-auto">
+      <section id="agents" className="py-24 px-6 border-t border-white/5 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'url(/images/agents-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }} />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-transparent to-[#0a0a0a]" />
+        <div className="max-w-6xl mx-auto relative z-10">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
             Agent templates
           </h2>
