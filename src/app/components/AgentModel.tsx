@@ -8,24 +8,20 @@ import * as THREE from 'three'
 function Model({ url }: { url: string }) {
   const gltf = useGLTF(url)
   const groupRef = useRef<THREE.Group>(null)
-  const { actions, names } = useAnimations(gltf.animations, groupRef)
+  const sceneRef = useRef<THREE.Group>(null)
+  const { actions, names } = useAnimations(gltf.animations, sceneRef)
   const { camera } = useThree()
 
   const hasAnimation = gltf.animations.length > 0
 
   // Compute bounding box to center model
-  const { centerX, centerY, centerZ, size } = useMemo(() => {
+  const { center, size } = useMemo(() => {
     const bbox = new THREE.Box3().setFromObject(gltf.scene)
-    const center = new THREE.Vector3()
-    bbox.getCenter(center)
+    const c = new THREE.Vector3()
+    bbox.getCenter(c)
     const s = new THREE.Vector3()
     bbox.getSize(s)
-    return {
-      centerX: -center.x,
-      centerY: -center.y,
-      centerZ: -center.z,
-      size: Math.max(s.x, s.y, s.z),
-    }
+    return { center: c, size: Math.max(s.x, s.y, s.z) }
   }, [gltf.scene])
 
   // Play first animation
@@ -56,10 +52,10 @@ function Model({ url }: { url: string }) {
   // Auto-fit camera
   useEffect(() => {
     const distance = size * 2
-    camera.position.set(0, 0, distance)
-    camera.lookAt(0, 0, 0)
+    camera.position.set(0, center.y, distance)
+    camera.lookAt(0, center.y, 0)
     camera.updateProjectionMatrix()
-  }, [camera, size])
+  }, [camera, size, center])
 
   // Auto-rotate only if no animation
   useFrame((_, delta) => {
@@ -70,7 +66,9 @@ function Model({ url }: { url: string }) {
 
   return (
     <group ref={groupRef}>
-      <primitive object={gltf.scene} position={[centerX, centerY, centerZ]} />
+      <group ref={sceneRef}>
+        <primitive object={gltf.scene} />
+      </group>
     </group>
   )
 }
