@@ -1,7 +1,7 @@
 'use client'
 
 import { Canvas, useFrame } from '@react-three/fiber'
-import { useGLTF, useAnimations, Center, Bounds } from '@react-three/drei'
+import { useGLTF, useAnimations } from '@react-three/drei'
 import { Suspense, useRef, useEffect } from 'react'
 import * as THREE from 'three'
 
@@ -46,23 +46,18 @@ function Model({ url }: { url: string }) {
 
   // Compute bounding box to anchor model at ground level
   const bbox = new THREE.Box3().setFromObject(gltf.scene)
+  const yOffset = -bbox.min.y  // shift feet to y=0
   const height = bbox.max.y - bbox.min.y
-  // Shift scene so feet are at y=0, then offset grid there
-  const yOffset = -bbox.min.y
+  const centerX = -(bbox.min.x + bbox.max.x) / 2
 
   return (
-    <Bounds fit clip observe margin={1.1}>
-      <Center>
-        <group ref={groupRef}>
-          <primitive object={gltf.scene} position={[0, yOffset, 0]} />
-          <gridHelper
-            args={[4, 12, '#3b82f6', '#1e3a5f']}
-            position={[0, 0, 0]}
-            rotation={[0, 0, 0]}
-          />
-        </group>
-      </Center>
-    </Bounds>
+    <group ref={groupRef} position={[centerX, 0, 0]}>
+      <primitive object={gltf.scene} position={[0, yOffset, 0]} />
+      <gridHelper
+        args={[4, 12, '#3b82f6', '#1e3a5f']}
+        position={[0, 0, 0]}
+      />
+    </group>
   )
 }
 
@@ -84,7 +79,7 @@ export default function AgentModel({ modelUrl, className = '' }: AgentModelProps
     <div className={`relative ${className}`} style={{ width: 200, height: 200 }}>
       <Suspense fallback={<LoadingSpinner />}>
         <Canvas
-          camera={{ position: [0, 0, 4], fov: 30 }}
+          camera={{ position: [0, 1, 4], fov: 35 }}
           gl={{ alpha: true }}
           style={{ background: 'transparent', pointerEvents: 'none' }}
         >
