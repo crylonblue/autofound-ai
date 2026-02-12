@@ -2,32 +2,26 @@
 
 import { Canvas, useFrame } from '@react-three/fiber'
 import { useGLTF, useAnimations, Center, Bounds } from '@react-three/drei'
-import { Suspense, useRef, useEffect, useMemo } from 'react'
+import { Suspense, useRef, useEffect } from 'react'
 import * as THREE from 'three'
 
 function Model({ url }: { url: string }) {
-  const { scene, animations } = useGLTF(url)
-  const clonedScene = useMemo(() => scene.clone(true), [scene])
+  const gltf = useGLTF(url)
   const groupRef = useRef<THREE.Group>(null)
-  const mixerRef = useRef<THREE.AnimationMixer | null>(null)
+  const { actions, names } = useAnimations(gltf.animations, groupRef)
 
-  const hasAnimation = animations.length > 0
+  const hasAnimation = gltf.animations.length > 0
 
-  // Set up animation mixer manually for better control
+  // Play first animation
   useEffect(() => {
-    if (hasAnimation && clonedScene) {
-      const mixer = new THREE.AnimationMixer(clonedScene)
-      mixerRef.current = mixer
-      const clip = animations[0]
-      const action = mixer.clipAction(clip)
-      action.reset().play()
-      return () => { mixer.stopAllAction() }
+    if (names.length > 0 && actions[names[0]]) {
+      actions[names[0]]!.reset().fadeIn(0.3).play()
     }
-  }, [hasAnimation, animations, clonedScene])
+  }, [actions, names])
 
   // Matte materials
   useEffect(() => {
-    clonedScene.traverse((child) => {
+    gltf.scene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh
         const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
@@ -41,14 +35,10 @@ function Model({ url }: { url: string }) {
         })
       }
     })
-  }, [clonedScene])
+  }, [gltf.scene])
 
+  // Auto-rotate only if no animation
   useFrame((_, delta) => {
-    // Update animation mixer
-    if (mixerRef.current) {
-      mixerRef.current.update(delta)
-    }
-    // Auto-rotate only if no animation
     if (groupRef.current && !hasAnimation) {
       groupRef.current.rotation.y += delta * 0.8
     }
@@ -58,7 +48,7 @@ function Model({ url }: { url: string }) {
     <Bounds fit clip observe margin={1.1}>
       <Center>
         <group ref={groupRef}>
-          <primitive object={clonedScene} />
+          <primitive object={gltf.scene} />
         </group>
       </Center>
     </Bounds>
