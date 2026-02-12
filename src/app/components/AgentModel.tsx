@@ -2,27 +2,20 @@
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useGLTF, useAnimations } from '@react-three/drei'
-import { Suspense, useRef, useEffect, useMemo } from 'react'
+import { Suspense, useRef, useEffect, useMemo, useState } from 'react'
 import * as THREE from 'three'
 
 function Model({ url }: { url: string }) {
   const gltf = useGLTF(url)
   const groupRef = useRef<THREE.Group>(null)
-  const sceneRef = useRef<THREE.Group>(null)
-  const { actions, names } = useAnimations(gltf.animations, sceneRef)
+  const { actions, names, ref: animRef } = useAnimations(gltf.animations)
   const { camera } = useThree()
+  const [ready, setReady] = useState(false)
 
   const hasAnimation = gltf.animations.length > 0
 
-  // Compute bounding box to center model
-  const { center, size } = useMemo(() => {
-    const bbox = new THREE.Box3().setFromObject(gltf.scene)
-    const c = new THREE.Vector3()
-    bbox.getCenter(c)
-    const s = new THREE.Vector3()
-    bbox.getSize(s)
-    return { center: c, size: Math.max(s.x, s.y, s.z) }
-  }, [gltf.scene])
+  // Clone scene to avoid shared state issues
+  const clonedScene = useMemo(() => gltf.scene.clone(true), [gltf.scene])
 
   // Play first animation
   useEffect(() => {
@@ -33,7 +26,7 @@ function Model({ url }: { url: string }) {
 
   // Matte materials
   useEffect(() => {
-    gltf.scene.traverse((child) => {
+    clonedScene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh
         const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
@@ -47,15 +40,23 @@ function Model({ url }: { url: string }) {
         })
       }
     })
-  }, [gltf.scene])
+  }, [clonedScene])
 
-  // Auto-fit camera
+  // Auto-fit camera after scene is added
   useEffect(() => {
-    const distance = size * 2
+    if (!groupRef.current) return
+    const bbox = new THREE.Box3().setFromObject(groupRef.current)
+    const center = new THREE.Vector3()
+    const size = new THREE.Vector3()
+    bbox.getCenter(center)
+    bbox.getSize(size)
+    const maxDim = Math.max(size.x, size.y, size.z)
+    const distance = maxDim * 2
     camera.position.set(0, center.y, distance)
     camera.lookAt(0, center.y, 0)
     camera.updateProjectionMatrix()
-  }, [camera, size, center])
+    setReady(true)
+  }, [camera, clonedScene])
 
   // Auto-rotate only if no animation
   useFrame((_, delta) => {
@@ -65,10 +66,8 @@ function Model({ url }: { url: string }) {
   })
 
   return (
-    <group ref={groupRef}>
-      <group ref={sceneRef}>
-        <primitive object={gltf.scene} />
-      </group>
+    <group ref={groupRef} visible={ready}>
+      <primitive ref={animRef} object={clonedScene} />
     </group>
   )
 }
