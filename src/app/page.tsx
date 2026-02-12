@@ -88,7 +88,7 @@ const steps = [
 ];
 
 const agents = [
-  { emoji: "👔", role: "CEO Agent", desc: "Reviews reports, sets priorities, delegates across departments.", task: "\"Summarize this week's KPIs and assign Q2 OKRs.\"", model: "/models/ceo.glb" },
+  { emoji: "👔", role: "CEO Agent", desc: "Reviews reports, sets priorities, delegates across departments.", task: "\"Summarize this week's KPIs and assign Q2 OKRs.\"", model: "/models/ceo.fbx" },
   { emoji: "💻", role: "Dev Agent", desc: "Writes code, runs tests, deploys to staging or production.", task: "\"Fix the auth bug in PR #42 and deploy to staging.\"", model: "/models/dev.glb" },
 ];
 
