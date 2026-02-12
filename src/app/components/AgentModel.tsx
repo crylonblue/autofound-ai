@@ -44,18 +44,20 @@ function Model({ url }: { url: string }) {
     }
   })
 
-  // Find the lowest point of the model to place the grid
+  // Compute bounding box to anchor model at ground level
   const bbox = new THREE.Box3().setFromObject(gltf.scene)
-  const bottom = bbox.min.y
+  const height = bbox.max.y - bbox.min.y
+  // Shift scene so feet are at y=0, then offset grid there
+  const yOffset = -bbox.min.y
 
   return (
     <Bounds fit clip observe margin={1.1}>
       <Center>
         <group ref={groupRef}>
-          <primitive object={gltf.scene} />
+          <primitive object={gltf.scene} position={[0, yOffset, 0]} />
           <gridHelper
             args={[4, 12, '#3b82f6', '#1e3a5f']}
-            position={[0, bottom, 0]}
+            position={[0, 0, 0]}
             rotation={[0, 0, 0]}
           />
         </group>
