@@ -25,7 +25,7 @@ function Model({ url }: { url: string }) {
             m.roughness = 1
             m.metalness = 0
             m.envMapIntensity = 0
-            m.normalMap = null
+            // Keep normalMap — it smooths the low-poly mesh
             m.metalnessMap = null
             m.roughnessMap = null
             m.aoMap = null
