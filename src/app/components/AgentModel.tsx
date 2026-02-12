@@ -2,72 +2,73 @@
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useGLTF, useAnimations } from '@react-three/drei'
-import { Suspense, useRef, useEffect, useMemo, useState } from 'react'
+import { Suspense, useRef, useEffect } from 'react'
 import * as THREE from 'three'
 
 function Model({ url }: { url: string }) {
-  const gltf = useGLTF(url)
-  const groupRef = useRef<THREE.Group>(null)
-  const { actions, names, ref: animRef } = useAnimations(gltf.animations)
+  const group = useRef<THREE.Group>(null!)
+  const { scene, animations } = useGLTF(url)
+  const { actions } = useAnimations(animations, group)
   const { camera } = useThree()
-  const [ready, setReady] = useState(false)
+  const hasAnimation = animations.length > 0
+  const fitted = useRef(false)
 
-  const hasAnimation = gltf.animations.length > 0
-
-  // Clone scene to avoid shared state issues
-  const clonedScene = useMemo(() => gltf.scene.clone(true), [gltf.scene])
-
-  // Play first animation
+  // Play first animation if available
   useEffect(() => {
-    if (names.length > 0 && actions[names[0]]) {
-      actions[names[0]]!.reset().fadeIn(0.3).play()
+    const actionNames = Object.keys(actions)
+    if (actionNames.length > 0) {
+      const first = actions[actionNames[0]]
+      if (first) {
+        first.reset().fadeIn(0.3).play()
+      }
     }
-  }, [actions, names])
+  }, [actions])
 
   // Matte materials
   useEffect(() => {
-    clonedScene.traverse((child) => {
+    scene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh
         const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
         mats.forEach((mat) => {
-          if ((mat as THREE.MeshStandardMaterial).roughness !== undefined) {
-            const m = mat as THREE.MeshStandardMaterial
-            m.roughness = 1
-            m.metalness = 0
-            m.envMapIntensity = 0
+          if ('roughness' in mat) {
+            ;(mat as THREE.MeshStandardMaterial).roughness = 1
+            ;(mat as THREE.MeshStandardMaterial).metalness = 0
+            ;(mat as THREE.MeshStandardMaterial).envMapIntensity = 0
           }
         })
       }
     })
-  }, [clonedScene])
+  }, [scene])
 
-  // Auto-fit camera after scene is added
-  useEffect(() => {
-    if (!groupRef.current) return
-    const bbox = new THREE.Box3().setFromObject(groupRef.current)
-    const center = new THREE.Vector3()
-    const size = new THREE.Vector3()
-    bbox.getCenter(center)
-    bbox.getSize(size)
-    const maxDim = Math.max(size.x, size.y, size.z)
-    const distance = maxDim * 2
-    camera.position.set(0, center.y, distance)
-    camera.lookAt(0, center.y, 0)
-    camera.updateProjectionMatrix()
-    setReady(true)
-  }, [camera, clonedScene])
-
-  // Auto-rotate only if no animation
+  // Fit camera + rotate
   useFrame((_, delta) => {
-    if (groupRef.current && !hasAnimation) {
-      groupRef.current.rotation.y += delta * 0.8
+    if (!group.current) return
+
+    // Fit camera once on first frame (after scene is in the tree)
+    if (!fitted.current) {
+      const bbox = new THREE.Box3().setFromObject(group.current)
+      if (bbox.isEmpty()) return // not ready yet
+      const center = new THREE.Vector3()
+      const size = new THREE.Vector3()
+      bbox.getCenter(center)
+      bbox.getSize(size)
+      const maxDim = Math.max(size.x, size.y, size.z)
+      camera.position.set(0, center.y, maxDim * 2.2)
+      camera.lookAt(center)
+      camera.updateProjectionMatrix()
+      fitted.current = true
+    }
+
+    // Auto-rotate only if no animation
+    if (!hasAnimation) {
+      group.current.rotation.y += delta * 0.8
     }
   })
 
   return (
-    <group ref={groupRef} visible={ready}>
-      <primitive ref={animRef} object={clonedScene} />
+    <group ref={group}>
+      <primitive object={scene} />
     </group>
   )
 }
