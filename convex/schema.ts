@@ -120,4 +120,11 @@ export default defineSchema({
   })
     .index("by_slug", ["slug"])
     .index("by_department", ["department"]),
+
+  waitlist: defineTable({
+    email: v.string(),
+    source: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_email", ["email"]),
 });

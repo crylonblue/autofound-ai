@@ -3,32 +3,42 @@
 import { useState, FormEvent } from "react";
 import LazyAgentModel from "./components/LazyAgentModel";
 
-/* ───────────────────────── helpers ───────────────────────── */
-
-function saveEmail(email: string) {
-  const list = JSON.parse(localStorage.getItem("waitlist") || "[]");
-  list.push({ email, ts: Date.now() });
-  localStorage.setItem("waitlist", JSON.stringify(list));
-}
-
 /* ───────────────────────── components ───────────────────────── */
 
 function WaitlistForm({ className = "" }: { className?: string }) {
   const [email, setEmail] = useState("");
-  const [done, setDone] = useState(false);
+  const [status, setStatus] = useState<"idle" | "loading" | "joined" | "already" | "error">("idle");
 
-  function handle(e: FormEvent) {
+  async function handle(e: FormEvent) {
     e.preventDefault();
     if (!email) return;
-    saveEmail(email);
-    setDone(true);
-    setEmail("");
+    setStatus("loading");
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setStatus(data.status === "already_joined" ? "already" : "joined");
+      setEmail("");
+    } catch {
+      setStatus("error");
+    }
   }
 
-  if (done)
+  if (status === "joined")
     return (
       <p className="text-blue-400 font-medium">
         🎉 You&apos;re on the list. We&apos;ll be in touch.
+      </p>
+    );
+
+  if (status === "already")
+    return (
+      <p className="text-blue-400 font-medium">
+        You&apos;re already on the list! We&apos;ll reach out soon.
       </p>
     );
 
@@ -40,14 +50,19 @@ function WaitlistForm({ className = "" }: { className?: string }) {
         placeholder="you@company.com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="flex-1 max-w-xs px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+        disabled={status === "loading"}
+        className="flex-1 max-w-xs px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-50"
       />
       <button
         type="submit"
-        className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition cursor-pointer"
+        disabled={status === "loading"}
+        className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Join waitlist
+        {status === "loading" ? "Joining..." : "Join waitlist"}
       </button>
+      {status === "error" && (
+        <p className="text-red-400 text-sm self-center">Something went wrong. Try again.</p>
+      )}
     </form>
   );
 }
