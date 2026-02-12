@@ -1,7 +1,7 @@
 'use client'
 
 import { Canvas, useFrame } from '@react-three/fiber'
-import { useGLTF, useAnimations, Center, Bounds, Grid } from '@react-three/drei'
+import { useGLTF, useAnimations, Center, Bounds } from '@react-three/drei'
 import { Suspense, useRef, useEffect } from 'react'
 import * as THREE from 'three'
 
@@ -44,11 +44,20 @@ function Model({ url }: { url: string }) {
     }
   })
 
+  // Find the lowest point of the model to place the grid
+  const bbox = new THREE.Box3().setFromObject(gltf.scene)
+  const bottom = bbox.min.y
+
   return (
     <Bounds fit clip observe margin={1.1}>
       <Center>
         <group ref={groupRef}>
           <primitive object={gltf.scene} />
+          <gridHelper
+            args={[4, 12, '#3b82f6', '#1e3a5f']}
+            position={[0, bottom, 0]}
+            rotation={[0, 0, 0]}
+          />
         </group>
       </Center>
     </Bounds>
@@ -83,19 +92,6 @@ export default function AgentModel({ modelUrl, className = '' }: AgentModelProps
           <directionalLight position={[-2, 3, -2]} intensity={0.3} />
           <directionalLight position={[0, -2, 3]} intensity={0.15} />
           <Model url={modelUrl} />
-          <Grid
-            position={[0, -1, 0]}
-            args={[10, 10]}
-            cellSize={0.4}
-            cellThickness={0.5}
-            cellColor="#3b82f6"
-            sectionSize={1.2}
-            sectionThickness={1}
-            sectionColor="#1e40af"
-            fadeDistance={6}
-            fadeStrength={1.5}
-            infiniteGrid
-          />
         </Canvas>
       </Suspense>
     </div>
