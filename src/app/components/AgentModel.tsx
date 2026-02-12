@@ -4,42 +4,25 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useGLTF, useAnimations } from '@react-three/drei'
 import { Suspense, useRef, useEffect, useMemo } from 'react'
 import * as THREE from 'three'
+import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js'
 
 function Model({ url }: { url: string }) {
   const group = useRef<THREE.Group>(null!)
   const { scene, animations } = useGLTF(url)
-  // Clone scene so each instance has its own scene graph
-  const clonedScene = useMemo(() => {
-    const clone = scene.clone(true)
-    // Clone skinned meshes properly
-    const sourceBones: Record<string, THREE.Bone> = {}
-    clone.traverse((node) => {
-      if ((node as THREE.Bone).isBone) sourceBones[node.name] = node as THREE.Bone
-    })
-    clone.traverse((node) => {
-      if ((node as THREE.SkinnedMesh).isSkinnedMesh) {
-        const skinnedMesh = node as THREE.SkinnedMesh
-        const skeleton = skinnedMesh.skeleton
-        const newBones = skeleton.bones.map((b) => sourceBones[b.name] || b)
-        skinnedMesh.skeleton = new THREE.Skeleton(newBones, skeleton.boneInverses.map(m => m.clone()))
-        skinnedMesh.bind(skinnedMesh.skeleton, skinnedMesh.bindMatrix)
-      }
-    })
-    return clone
-  }, [scene])
+  
+  // SkeletonUtils.clone properly handles skinned meshes + skeletons
+  const clonedScene = useMemo(() => skeletonClone(scene), [scene])
+  
   const { actions } = useAnimations(animations, group)
   const { camera } = useThree()
   const hasAnimation = animations.length > 0
   const fitted = useRef(false)
 
-  // Play first animation if available
+  // Play first animation
   useEffect(() => {
-    const actionNames = Object.keys(actions)
-    if (actionNames.length > 0) {
-      const first = actions[actionNames[0]]
-      if (first) {
-        first.reset().fadeIn(0.3).play()
-      }
+    const names = Object.keys(actions)
+    if (names.length > 0 && actions[names[0]]) {
+      actions[names[0]]!.reset().fadeIn(0.3).play()
     }
   }, [actions])
 
@@ -64,10 +47,9 @@ function Model({ url }: { url: string }) {
   useFrame((_, delta) => {
     if (!group.current) return
 
-    // Fit camera once on first frame (after scene is in the tree)
     if (!fitted.current) {
       const bbox = new THREE.Box3().setFromObject(group.current)
-      if (bbox.isEmpty()) return // not ready yet
+      if (bbox.isEmpty()) return
       const center = new THREE.Vector3()
       const size = new THREE.Vector3()
       bbox.getCenter(center)
@@ -79,7 +61,6 @@ function Model({ url }: { url: string }) {
       fitted.current = true
     }
 
-    // Auto-rotate only if no animation
     if (!hasAnimation) {
       group.current.rotation.y += delta * 0.8
     }
