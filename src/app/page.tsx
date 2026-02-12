@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import Image from "next/image";
+import LazyAgentModel from "./components/LazyAgentModel";
 
 /* ───────────────────────── components ───────────────────────── */
 
@@ -88,10 +89,10 @@ const steps = [
 ];
 
 const agents = [
-  { emoji: "👔", role: "CEO Agent", desc: "Reviews reports, sets priorities, delegates across departments.", task: "\"Summarize this week's KPIs and assign Q2 OKRs.\"", image: "/models/agent-ceo.png" },
-  { emoji: "💻", role: "Dev Agent", desc: "Writes code, runs tests, deploys to staging or production.", task: "\"Fix the auth bug in PR #42 and deploy to staging.\"", image: "/models/agent-dev.png" },
-  { emoji: "📣", role: "Marketing Agent", desc: "Runs campaigns, tracks analytics, optimizes funnels and content.", task: "\"Launch the Q1 email campaign and report open rates.\"", image: "/models/agent-marketing.png" },
-  { emoji: "🤝", role: "Sales Agent", desc: "Qualifies leads, sends proposals, follows up on deals.", task: "\"Follow up with the 12 warm leads from last week.\"", image: "/models/agent-sales.png" },
+  { emoji: "👔", role: "CEO Agent", desc: "Reviews reports, sets priorities, delegates across departments.", task: "\"Summarize this week's KPIs and assign Q2 OKRs.\"", image: "/models/agent-ceo.png", model: "/models/ceo.glb" },
+  { emoji: "💻", role: "Dev Agent", desc: "Writes code, runs tests, deploys to staging or production.", task: "\"Fix the auth bug in PR #42 and deploy to staging.\"", image: "/models/agent-dev.png", model: "/models/dev.glb" },
+  { emoji: "📣", role: "Marketing Agent", desc: "Runs campaigns, tracks analytics, optimizes funnels and content.", task: "\"Launch the Q1 email campaign and report open rates.\"", image: "/models/agent-marketing.png", model: "/models/marketing.glb" },
+  { emoji: "🤝", role: "Sales Agent", desc: "Qualifies leads, sends proposals, follows up on deals.", task: "\"Follow up with the 12 warm leads from last week.\"", image: "/models/agent-sales.png", model: "/models/sales.glb" },
 ];
 
 const pricing = [
@@ -238,7 +239,7 @@ export default function Home() {
                 className="p-5 rounded-xl border border-white/5 bg-white/[0.02] hover:border-blue-500/30 hover:bg-white/[0.04] transition group"
               >
                 <div className="flex justify-center mb-3">
-                  <Image src={a.image} alt={a.role} width={200} height={200} className="object-contain" />
+                  <LazyAgentModel modelUrl={a.model} />
                 </div>
                 <h3 className="font-semibold text-white">{a.role}</h3>
                 <p className="mt-1 text-sm text-zinc-400">{a.desc}</p>
