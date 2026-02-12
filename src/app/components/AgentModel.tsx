@@ -2,12 +2,31 @@
 
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useGLTF, useAnimations } from '@react-three/drei'
-import { Suspense, useRef, useEffect } from 'react'
+import { Suspense, useRef, useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 
 function Model({ url }: { url: string }) {
   const group = useRef<THREE.Group>(null!)
   const { scene, animations } = useGLTF(url)
+  // Clone scene so each instance has its own scene graph
+  const clonedScene = useMemo(() => {
+    const clone = scene.clone(true)
+    // Clone skinned meshes properly
+    const sourceBones: Record<string, THREE.Bone> = {}
+    clone.traverse((node) => {
+      if ((node as THREE.Bone).isBone) sourceBones[node.name] = node as THREE.Bone
+    })
+    clone.traverse((node) => {
+      if ((node as THREE.SkinnedMesh).isSkinnedMesh) {
+        const skinnedMesh = node as THREE.SkinnedMesh
+        const skeleton = skinnedMesh.skeleton
+        const newBones = skeleton.bones.map((b) => sourceBones[b.name] || b)
+        skinnedMesh.skeleton = new THREE.Skeleton(newBones, skeleton.boneInverses.map(m => m.clone()))
+        skinnedMesh.bind(skinnedMesh.skeleton, skinnedMesh.bindMatrix)
+      }
+    })
+    return clone
+  }, [scene])
   const { actions } = useAnimations(animations, group)
   const { camera } = useThree()
   const hasAnimation = animations.length > 0
@@ -26,7 +45,7 @@ function Model({ url }: { url: string }) {
 
   // Matte materials
   useEffect(() => {
-    scene.traverse((child) => {
+    clonedScene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh
         const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
@@ -39,7 +58,7 @@ function Model({ url }: { url: string }) {
         })
       }
     })
-  }, [scene])
+  }, [clonedScene])
 
   // Fit camera + rotate
   useFrame((_, delta) => {
@@ -68,7 +87,7 @@ function Model({ url }: { url: string }) {
 
   return (
     <group ref={group}>
-      <primitive object={scene} />
+      <primitive object={clonedScene} />
     </group>
   )
 }
