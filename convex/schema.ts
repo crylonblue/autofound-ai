@@ -8,7 +8,14 @@ export default defineSchema({
     email: v.string(),
     name: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    // Encrypted API keys (AES-256-GCM)
     apiKeys: v.optional(v.object({
+      openai: v.optional(v.string()),
+      anthropic: v.optional(v.string()),
+      google: v.optional(v.string()),
+    })),
+    // Masked display values (e.g. "sk-••••abcd")
+    apiKeyMasks: v.optional(v.object({
       openai: v.optional(v.string()),
       anthropic: v.optional(v.string()),
       google: v.optional(v.string()),
