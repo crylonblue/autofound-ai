@@ -97,6 +97,49 @@ function WaitlistForm({ className = "" }: { className?: string }) {
   );
 }
 
+const faqs = [
+  { q: "How does Bring Your Own Key (BYOK) work?", a: "You connect your own AI provider API keys. Your usage, your costs, full control." },
+  { q: "What AI models are supported?", a: "OpenAI, Anthropic Claude, Google Gemini, Mistral, Llama, and 100+ more via standard APIs." },
+  { q: "Can I customize agent roles?", a: "Yes, every agent template is fully customizable. Edit system prompts, tools, permissions, and communication rules." },
+  { q: "Is my data private?", a: "Absolutely. With BYOK, data flows directly between you and your AI provider. We never see your prompts or outputs." },
+  { q: "Can agents communicate with each other?", a: "Yes, agents follow your org chart. They can delegate tasks, request approvals, and escalate issues." },
+  { q: "What happens if an agent makes a mistake?", a: "All critical actions require human approval gates. You set the rules for what needs sign-off." },
+];
+
+function FAQItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-white/5 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-white/[0.02] transition cursor-pointer"
+      >
+        <span className="font-medium text-white pr-4">{q}</span>
+        <span className={`text-zinc-500 text-xl transition-transform duration-200 ${open ? "rotate-45" : ""}`}>+</span>
+      </button>
+      {open && (
+        <div className="px-6 pb-4 text-sm text-zinc-400 leading-relaxed">{a}</div>
+      )}
+    </div>
+  );
+}
+
+function FAQSection() {
+  return (
+    <section id="faq" className="py-24 px-6 border-t border-white/5">
+      <div className="max-w-3xl mx-auto">
+        <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">Frequently asked questions</h2>
+        <p className="text-zinc-400 text-center mb-14 max-w-xl mx-auto">Everything you need to know about autofound.ai</p>
+        <div className="space-y-3">
+          {faqs.map((f) => (
+            <FAQItem key={f.q} q={f.q} a={f.a} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ───────────────────────── data ───────────────────────── */
 
 const steps = [
@@ -122,6 +165,10 @@ const agents = [
   { emoji: "💻", role: "Dev Agent", desc: "Writes code, runs tests, deploys to staging or production.", task: "\"Fix the auth bug in PR #42 and deploy to staging.\"", image: "/models/agent-dev.png", model: "/models/dev.glb" },
   { emoji: "📣", role: "Marketing Agent", desc: "Runs campaigns, tracks analytics, optimizes funnels and content.", task: "\"Launch the Q1 email campaign and report open rates.\"", image: "/models/agent-marketing.png", model: "/models/marketing.glb" },
   { emoji: "🤝", role: "Sales Agent", desc: "Qualifies leads, sends proposals, follows up on deals.", task: "\"Follow up with the 12 warm leads from last week.\"", image: "/models/agent-sales.png", model: "/models/sales.glb" },
+  { emoji: "🎧", role: "Customer Support", desc: "Handles tickets, writes help docs, escalates critical issues.", task: "\"Resolve the 15 open support tickets and update the FAQ.\"" },
+  { emoji: "📊", role: "Data Analyst", desc: "Crunches numbers, builds reports, spots trends in your data.", task: "\"Generate the weekly KPI dashboard and flag anomalies.\"" },
+  { emoji: "🔧", role: "Operations Manager", desc: "Manages workflows, coordinates between teams, optimizes processes.", task: "\"Audit our onboarding flow and reduce steps from 8 to 5.\"" },
+  { emoji: "✍️", role: "Content Writer", desc: "Writes blog posts, social copy, newsletters, and landing pages.", task: "\"Write 3 SEO blog posts targeting our top keywords.\"" },
 ];
 
 const pricing = [
@@ -153,6 +200,7 @@ export default function Home() {
             <a href="#how" className="hover:text-white transition">How it works</a>
             <a href="#agents" className="hover:text-white transition">Agents</a>
             <a href="#pricing" className="hover:text-white transition">Pricing</a>
+            <a href="#faq" className="hover:text-white transition">FAQ</a>
           </div>
           <a
             href="#waitlist"
@@ -285,14 +333,20 @@ export default function Home() {
             Pre-built roles with system prompts, tools, and default behaviors.
             Customize or create your own.
           </p>
-          <div className="grid sm:grid-cols-2 max-w-2xl mx-auto gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 max-w-5xl mx-auto gap-6">
             {agents.map((a) => (
               <div
                 key={a.role}
                 className="p-5 rounded-xl border border-white/5 bg-white/[0.02] hover:border-blue-500/30 hover:bg-white/[0.04] transition group"
               >
                 <div className="flex justify-center mb-3">
-                  <LazyAgentModel modelUrl={a.model} />
+                  {a.model ? (
+                    <LazyAgentModel modelUrl={a.model} />
+                  ) : (
+                    <div className="w-32 h-32 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-center text-6xl">
+                      {a.emoji}
+                    </div>
+                  )}
                 </div>
                 <h3 className="font-semibold text-white">{a.role}</h3>
                 <p className="mt-1 text-sm text-zinc-400">{a.desc}</p>
@@ -388,6 +442,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ─── FAQ ─── */}
+      <FAQSection />
 
       {/* ─── CTA / Waitlist ─── */}
       <section id="waitlist" className="py-24 px-6 border-t border-white/5">
