@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Key, Globe, Shield, Bell, Save, Eye, EyeOff, CheckCircle2, Trash2, Loader2 } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
-import { api } from "../../../../convex/_generated/api";
+import { api } from "@convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
 
 const PROVIDERS = [

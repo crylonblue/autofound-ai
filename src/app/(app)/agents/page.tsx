@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Plus, Search, Play, Pause, Trash2, X, Edit2, Loader2 } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
-import { api } from "../../../../convex/_generated/api";
-import type { Id } from "../../../../convex/_generated/dataModel";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 
 function useClerkUser() {
   return useUser();
