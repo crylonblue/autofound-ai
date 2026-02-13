@@ -13,7 +13,7 @@ function getEncryptionKey(): Buffer {
   return crypto.createHash("sha256").update(key).digest();
 }
 
-function encrypt(plaintext: string): string {
+export function encrypt(plaintext: string): string {
   const key = getEncryptionKey();
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
@@ -23,7 +23,7 @@ function encrypt(plaintext: string): string {
   return `${iv.toString("base64")}:${tag.toString("base64")}:${encrypted}`;
 }
 
-function decrypt(blob: string): string {
+export function decrypt(blob: string): string {
   const key = getEncryptionKey();
   const [ivB64, tagB64, ciphertext] = blob.split(":");
   const iv = Buffer.from(ivB64, "base64");

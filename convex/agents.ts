@@ -1,6 +1,28 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
+export const getAgent = query({
+  args: { agentId: v.id("agents") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.agentId);
+  },
+});
+
+export const listAgentsByClerk = query({
+  args: { clerkId: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+    if (!user) return [];
+    return await ctx.db
+      .query("agents")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+  },
+});
+
 export const listAgents = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {

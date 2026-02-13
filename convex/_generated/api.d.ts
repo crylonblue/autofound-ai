@@ -10,6 +10,7 @@
 
 import type * as agents from "../agents.js";
 import type * as crypto from "../crypto.js";
+import type * as execute from "../execute.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
 
@@ -22,6 +23,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   agents: typeof agents;
   crypto: typeof crypto;
+  execute: typeof execute;
   tasks: typeof tasks;
   users: typeof users;
 }>;
