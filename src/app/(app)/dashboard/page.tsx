@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
-import { api } from "@convex/_generated/api";
+import { api } from "../../../../convex/_generated/api";
 
 function useClerkUser() {
   return useUser();
