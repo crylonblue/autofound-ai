@@ -1,57 +1,66 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import {
   Users,
   ListTodo,
-  MessageSquare,
-  GitBranchPlus,
   Plus,
-  Play,
-  Pause,
   Activity,
   Zap,
   ArrowRight,
+  GitBranchPlus,
+  Loader2,
 } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 
-// Demo data until Convex is connected
-const demoAgents = [
-  { id: "1", name: "CEO Agent", role: "CEO", icon: "👔", status: "active" as const, department: "executive", tasksCompleted: 12, tokensUsed: 45200 },
-  { id: "2", name: "Content Writer", role: "Writer", icon: "✍️", status: "active" as const, department: "marketing", tasksCompleted: 8, tokensUsed: 32100 },
-  { id: "3", name: "SEO Specialist", role: "SEO", icon: "🔍", status: "active" as const, department: "marketing", tasksCompleted: 5, tokensUsed: 18700 },
-];
+function useClerkUser() {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useUser } = require("@clerk/nextjs");
+    return useUser();
+  } catch {
+    return { user: null, isLoaded: true };
+  }
+}
 
-const demoActivity = [
-  { id: "1", agent: "CEO Agent", icon: "👔", action: "Delegated blog post task to Content Writer", time: "2 min ago", type: "task" },
-  { id: "2", agent: "Content Writer", icon: "✍️", action: "Completed: '5 AI Trends for 2026' blog post", time: "8 min ago", type: "completed" },
-  { id: "3", agent: "SEO Specialist", icon: "🔍", action: "Sent keyword report to Content Writer", time: "15 min ago", type: "message" },
-  { id: "4", agent: "CEO Agent", icon: "👔", action: "Escalated pricing decision to founder", time: "1 hr ago", type: "escalation" },
-  { id: "5", agent: "Content Writer", icon: "✍️", action: "Started working on social media posts", time: "1 hr ago", type: "task" },
-];
-
-const demoTasks = [
-  { id: "1", title: "Write weekly blog post", assignee: "Content Writer", status: "in_progress", priority: "high" },
-  { id: "2", title: "Keyword research for Q1", assignee: "SEO Specialist", status: "pending", priority: "normal" },
-  { id: "3", title: "Review department reports", assignee: "CEO Agent", status: "needs_approval", priority: "urgent" },
-];
+const statusColors: Record<string, { color: string; bg: string }> = {
+  pending: { color: "text-zinc-400", bg: "bg-zinc-500/10" },
+  running: { color: "text-blue-400", bg: "bg-blue-500/10" },
+  needs_approval: { color: "text-amber-400", bg: "bg-amber-500/10" },
+  completed: { color: "text-emerald-400", bg: "bg-emerald-500/10" },
+  failed: { color: "text-red-400", bg: "bg-red-500/10" },
+};
 
 export default function DashboardPage() {
-  const [companyName] = useState("My AI Company");
+  const { user: clerkUser, isLoaded } = useClerkUser();
+  const clerkId = clerkUser?.id ?? "";
+
+  const agents = useQuery(api.agents.listAgentsByClerk, clerkId ? { clerkId } : "skip");
+  const tasks = useQuery(api.tasks.listTasksWithAgents, clerkId ? { clerkId } : "skip");
+
+  if (!isLoaded) {
+    return <div className="p-8 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-zinc-400" /></div>;
+  }
+
+  const activeAgents = agents?.filter((a) => a.status === "active") ?? [];
+  const completedTasks = tasks?.filter((t) => t.status === "completed") ?? [];
+  const pendingTasks = tasks?.filter((t) => t.status === "pending" || t.status === "needs_approval") ?? [];
+  const recentTasks = [...(tasks ?? [])].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold">{companyName}</h1>
-          <p className="text-zinc-400 text-sm mt-1">Your AI workforce is running</p>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-zinc-400 text-sm mt-1">
+            {activeAgents.length > 0
+              ? `${activeAgents.length} agent${activeAgents.length !== 1 ? "s" : ""} active`
+              : "Get started by hiring your first agent"}
+          </p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition-colors">
-            <Pause className="w-4 h-4" />
-            Pause All
-          </button>
           <Link
             href="/agents"
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors"
@@ -65,15 +74,12 @@ export default function DashboardPage() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Active Agents", value: demoAgents.length, icon: Users, color: "text-blue-400" },
-          { label: "Tasks Today", value: 15, icon: ListTodo, color: "text-emerald-400" },
-          { label: "Messages", value: 42, icon: MessageSquare, color: "text-purple-400" },
-          { label: "Tokens Used", value: "96K", icon: Zap, color: "text-amber-400" },
+          { label: "Active Agents", value: activeAgents.length, icon: Users, color: "text-blue-400" },
+          { label: "Total Tasks", value: tasks?.length ?? 0, icon: ListTodo, color: "text-emerald-400" },
+          { label: "Completed", value: completedTasks.length, icon: Zap, color: "text-purple-400" },
+          { label: "Pending", value: pendingTasks.length, icon: Activity, color: "text-amber-400" },
         ].map((stat) => (
-          <div
-            key={stat.label}
-            className="bg-white/[0.03] border border-white/10 rounded-xl p-5"
-          >
+          <div key={stat.label} className="bg-white/[0.03] border border-white/10 rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-zinc-400">{stat.label}</span>
               <stat.icon className={`w-4 h-4 ${stat.color}`} />
@@ -84,34 +90,38 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-6">
-        {/* Activity Feed */}
+        {/* Recent Tasks */}
         <div className="col-span-2 bg-white/[0.03] border border-white/10 rounded-xl">
           <div className="flex items-center justify-between p-5 border-b border-white/10">
             <h2 className="font-semibold flex items-center gap-2">
               <Activity className="w-4 h-4 text-blue-400" />
-              Activity Feed
+              Recent Tasks
             </h2>
-            <span className="text-xs text-zinc-500">Live</span>
+            <Link href="/tasks" className="text-xs text-blue-400 hover:text-blue-300">View all</Link>
           </div>
-          <div className="divide-y divide-white/5">
-            {demoActivity.map((item) => (
-              <div key={item.id} className="flex items-start gap-3 p-4 hover:bg-white/[0.02] transition-colors">
-                <span className="text-xl mt-0.5">{item.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm">
-                    <span className="font-medium text-zinc-200">{item.agent}</span>{" "}
-                    <span className="text-zinc-400">{item.action}</span>
-                  </p>
-                  <p className="text-xs text-zinc-600 mt-1">{item.time}</p>
-                </div>
-                {item.type === "escalation" && (
-                  <span className="text-xs bg-amber-500/10 text-amber-400 px-2 py-1 rounded-full">
-                    Needs Review
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
+          {recentTasks.length === 0 ? (
+            <div className="p-8 text-center text-zinc-500 text-sm">
+              No tasks yet. <Link href="/tasks" className="text-blue-400 hover:underline">Create one</Link>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/5">
+              {recentTasks.map((task) => {
+                const sc = statusColors[task.status] ?? statusColors.pending;
+                return (
+                  <div key={task._id} className="flex items-start gap-3 p-4 hover:bg-white/[0.02] transition-colors">
+                    <span className="text-xl mt-0.5">{task.agentIcon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{task.title}</p>
+                      <p className="text-xs text-zinc-500 mt-1">{task.agentName} · {new Date(task.createdAt).toLocaleString()}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.color} capitalize`}>
+                      {task.status.replace("_", " ")}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Right column */}
@@ -121,80 +131,44 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between p-5 border-b border-white/10">
               <h2 className="font-semibold flex items-center gap-2">
                 <Users className="w-4 h-4 text-blue-400" />
-                Active Agents
+                Agents
               </h2>
-              <Link href="/agents" className="text-xs text-blue-400 hover:text-blue-300">
-                View all
-              </Link>
+              <Link href="/agents" className="text-xs text-blue-400 hover:text-blue-300">View all</Link>
             </div>
-            <div className="divide-y divide-white/5">
-              {demoAgents.map((agent) => (
-                <div key={agent.id} className="flex items-center gap-3 p-4">
-                  <span className="text-xl">{agent.icon}</span>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{agent.name}</p>
-                    <p className="text-xs text-zinc-500">{agent.department}</p>
+            {(!agents || agents.length === 0) ? (
+              <div className="p-6 text-center text-zinc-500 text-sm">
+                No agents yet. <Link href="/agents" className="text-blue-400 hover:underline">Hire one</Link>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {agents.slice(0, 5).map((agent) => (
+                  <div key={agent._id} className="flex items-center gap-3 p-4">
+                    <span className="text-xl">{agent.icon}</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{agent.name}</p>
+                      <p className="text-xs text-zinc-500">{agent.role}</p>
+                    </div>
+                    <div className={`w-2 h-2 rounded-full ${agent.status === "active" ? "bg-emerald-400" : "bg-zinc-600"}`} />
                   </div>
-                  <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Pending Tasks */}
-          <div className="bg-white/[0.03] border border-white/10 rounded-xl">
-            <div className="flex items-center justify-between p-5 border-b border-white/10">
-              <h2 className="font-semibold flex items-center gap-2">
-                <ListTodo className="w-4 h-4 text-blue-400" />
-                Pending Tasks
-              </h2>
-              <Link href="/tasks" className="text-xs text-blue-400 hover:text-blue-300">
-                View all
-              </Link>
-            </div>
-            <div className="divide-y divide-white/5">
-              {demoTasks.map((task) => (
-                <div key={task.id} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{task.title}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      task.priority === "urgent"
-                        ? "bg-red-500/10 text-red-400"
-                        : task.priority === "high"
-                        ? "bg-amber-500/10 text-amber-400"
-                        : "bg-zinc-500/10 text-zinc-400"
-                    }`}>
-                      {task.priority}
-                    </span>
-                  </div>
-                  <p className="text-xs text-zinc-500 mt-1">{task.assignee}</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Quick Actions */}
           <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5">
             <h2 className="font-semibold mb-4">Quick Actions</h2>
             <div className="space-y-2">
-              <Link
-                href="/org-chart"
-                className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors text-sm"
-              >
-                <span className="flex items-center gap-2">
-                  <GitBranchPlus className="w-4 h-4 text-blue-400" />
-                  Edit Org Chart
-                </span>
+              <Link href="/org-chart" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors text-sm">
+                <span className="flex items-center gap-2"><GitBranchPlus className="w-4 h-4 text-blue-400" />Edit Org Chart</span>
                 <ArrowRight className="w-3 h-3 text-zinc-600" />
               </Link>
-              <Link
-                href="/tasks"
-                className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors text-sm"
-              >
-                <span className="flex items-center gap-2">
-                  <Plus className="w-4 h-4 text-emerald-400" />
-                  Create Task
-                </span>
+              <Link href="/tasks" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors text-sm">
+                <span className="flex items-center gap-2"><Plus className="w-4 h-4 text-emerald-400" />Create Task</span>
+                <ArrowRight className="w-3 h-3 text-zinc-600" />
+              </Link>
+              <Link href="/settings" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors text-sm">
+                <span className="flex items-center gap-2"><Zap className="w-4 h-4 text-amber-400" />API Keys</span>
                 <ArrowRight className="w-3 h-3 text-zinc-600" />
               </Link>
             </div>
