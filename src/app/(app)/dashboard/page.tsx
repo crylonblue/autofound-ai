@@ -12,16 +12,11 @@ import {
   Loader2,
 } from "lucide-react";
 import { useQuery } from "convex/react";
+import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
 
 function useClerkUser() {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { useUser } = require("@clerk/nextjs");
-    return useUser();
-  } catch {
-    return { user: null, isLoaded: true };
-  }
+  return useUser();
 }
 
 const statusColors: Record<string, { color: string; bg: string }> = {

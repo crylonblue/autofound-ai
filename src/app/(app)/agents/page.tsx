@@ -3,17 +3,12 @@
 import { useState } from "react";
 import { Plus, Search, Play, Pause, Trash2, X, Edit2, Loader2 } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
+import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
 function useClerkUser() {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { useUser } = require("@clerk/nextjs");
-    return useUser();
-  } catch {
-    return { user: null, isLoaded: true };
-  }
+  return useUser();
 }
 
 const templates = [

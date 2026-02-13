@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, FormEvent } from "react";
-import Image from "next/image";
+import { useState } from "react";
+import Link from "next/link";
 import LazyAgentModel from "./components/LazyAgentModel";
 
 /* ───────────────────────── components ───────────────────────── */
@@ -35,65 +35,22 @@ function OrgNode({ icon, label, sub, color, mini, pulse, glow = true }: {
   );
 }
 
-function WaitlistForm({ className = "" }: { className?: string }) {
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "joined" | "already" | "error">("idle");
-
-  async function handle(e: FormEvent) {
-    e.preventDefault();
-    if (!email) return;
-    setStatus("loading");
-    try {
-      const res = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setStatus(data.status === "already_joined" ? "already" : "joined");
-      setEmail("");
-    } catch {
-      setStatus("error");
-    }
-  }
-
-  if (status === "joined")
-    return (
-      <p className="text-blue-400 font-medium">
-        🎉 You&apos;re on the list. We&apos;ll be in touch.
-      </p>
-    );
-
-  if (status === "already")
-    return (
-      <p className="text-blue-400 font-medium">
-        You&apos;re already on the list! We&apos;ll reach out soon.
-      </p>
-    );
-
+function CTAButtons({ className = "", center = false }: { className?: string; center?: boolean }) {
   return (
-    <form onSubmit={handle} className={`flex gap-3 ${className}`}>
-      <input
-        type="email"
-        required
-        placeholder="you@company.com"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        disabled={status === "loading"}
-        className="flex-1 max-w-xs px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder:text-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition disabled:opacity-50"
-      />
-      <button
-        type="submit"
-        disabled={status === "loading"}
-        className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+    <div className={`flex gap-4 ${center ? "justify-center" : ""} ${className}`}>
+      <Link
+        href="/sign-up"
+        className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition"
       >
-        {status === "loading" ? "Joining..." : "Join waitlist"}
-      </button>
-      {status === "error" && (
-        <p className="text-red-400 text-sm self-center">Something went wrong. Try again.</p>
-      )}
-    </form>
+        Get started free
+      </Link>
+      <Link
+        href="/sign-in"
+        className="px-8 py-3 bg-white/5 hover:bg-white/10 text-zinc-300 font-semibold rounded-lg border border-white/10 transition"
+      >
+        Sign in
+      </Link>
+    </div>
   );
 }
 
@@ -202,12 +159,14 @@ export default function Home() {
             <a href="#pricing" className="hover:text-white transition">Pricing</a>
             <a href="#faq" className="hover:text-white transition">FAQ</a>
           </div>
-          <a
-            href="#waitlist"
-            className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition"
-          >
-            Join waitlist
-          </a>
+          <div className="flex gap-3">
+            <Link href="/sign-in" className="text-sm px-4 py-2 text-zinc-400 hover:text-white transition">
+              Sign in
+            </Link>
+            <Link href="/sign-up" className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition">
+              Get started
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -235,8 +194,8 @@ export default function Home() {
             Build and run your company with AI agent teams. Hire roles, define
             org charts, and let them execute real work — autonomously.
           </p>
-          <div className="mt-10 flex justify-center animate-fade-in-up animate-delay-200">
-            <WaitlistForm />
+          <div className="mt-10 animate-fade-in-up animate-delay-200">
+            <CTAButtons center />
           </div>
           <p className="mt-4 text-sm text-zinc-600 animate-fade-in-up animate-delay-300">
             Free to start · No credit card required · BYOK
@@ -427,8 +386,8 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-                <a
-                  href="#waitlist"
+                <Link
+                  href="/sign-up"
                   className={`mt-6 block text-center py-3 rounded-lg font-semibold transition ${
                     p.popular
                       ? "bg-blue-600 hover:bg-blue-500 text-white"
@@ -436,7 +395,7 @@ export default function Home() {
                   }`}
                 >
                   Get started
-                </a>
+                </Link>
               </div>
             ))}
           </div>
@@ -446,18 +405,16 @@ export default function Home() {
       {/* ─── FAQ ─── */}
       <FAQSection />
 
-      {/* ─── CTA / Waitlist ─── */}
-      <section id="waitlist" className="py-24 px-6 border-t border-white/5">
+      {/* ─── CTA ─── */}
+      <section className="py-24 px-6 border-t border-white/5">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
             Ready to build your AI company?
           </h2>
           <p className="text-zinc-400 mb-10">
-            Join the waitlist and be the first to hire your AI workforce.
+            Sign up free and hire your first AI employees in minutes.
           </p>
-          <div className="flex justify-center">
-            <WaitlistForm />
-          </div>
+          <CTAButtons center />
         </div>
       </section>
 
