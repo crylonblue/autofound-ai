@@ -1,0 +1,43 @@
+# autofound.ai — Base Agent Image
+# Provides: Ubuntu 24.04, Python 3.12, Node 22, npm, git, curl
+# All agent images extend this.
+
+FROM ubuntu:24.04
+
+LABEL org.opencontainers.image.source="https://github.com/crylonblue/autofound-ai"
+LABEL org.opencontainers.image.description="autofound.ai base agent image"
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV NODE_ENV=production
+
+# System packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.12 \
+    python3.12-venv \
+    python3-pip \
+    curl \
+    git \
+    ca-certificates \
+    gnupg \
+    jq \
+    && rm -rf /var/lib/apt/lists/*
+
+# Node.js 22 via NodeSource
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python defaults
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1
+
+# Create non-root agent user
+RUN useradd -m -s /bin/bash agent
+WORKDIR /home/agent
+USER agent
+
+# Health check endpoint placeholder
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+CMD ["bash"]

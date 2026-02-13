@@ -1,0 +1,29 @@
+# autofound.ai — Developer Agent Image
+# Extends base with build tools for coding agents.
+
+FROM autofound-base:latest
+
+USER root
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3.12-dev \
+    openssh-client \
+    wget \
+    unzip \
+    make \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Common Python dev packages
+RUN python -m pip install --break-system-packages --no-cache-dir \
+    requests \
+    pyyaml \
+    python-dotenv \
+    httpx
+
+USER agent
+WORKDIR /home/agent
+
+CMD ["bash"]

@@ -1,0 +1,44 @@
+# autofound.ai — Marketer Agent Image
+# Extends base with browser automation and data analysis tools.
+
+FROM autofound-base:latest
+
+USER root
+
+# Playwright system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2t64 \
+    libxshmfence1 \
+    fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python packages for marketing/data work
+RUN python -m pip install --break-system-packages --no-cache-dir \
+    pandas \
+    playwright \
+    beautifulsoup4 \
+    lxml \
+    requests \
+    httpx \
+    jinja2 \
+    markdown
+
+# Install Playwright browsers (Chromium only to save space)
+USER agent
+RUN python -m playwright install chromium
+
+WORKDIR /home/agent
+
+CMD ["bash"]
