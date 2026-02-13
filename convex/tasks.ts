@@ -1,38 +1,32 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
-export const list = query({
-  args: { companyId: v.id("companies") },
+export const listTasks = query({
+  args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("tasks")
-      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
-      .order("desc")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect();
   },
 });
 
-export const listByStatus = query({
-  args: { companyId: v.id("companies"), status: v.string() },
+export const getTasksByAgent = query({
+  args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("tasks")
-      .withIndex("by_company_status", (q) =>
-        q.eq("companyId", args.companyId).eq("status", args.status as any)
-      )
+      .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
       .collect();
   },
 });
 
-export const create = mutation({
+export const createTask = mutation({
   args: {
-    companyId: v.id("companies"),
+    userId: v.id("users"),
+    agentId: v.id("agents"),
     title: v.string(),
-    description: v.string(),
-    assignedTo: v.id("agents"),
-    assignedBy: v.optional(v.id("agents")),
-    assignedByFounder: v.optional(v.boolean()),
-    priority: v.union(v.literal("low"), v.literal("normal"), v.literal("high"), v.literal("urgent")),
+    description: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("tasks", {
@@ -43,22 +37,18 @@ export const create = mutation({
   },
 });
 
-export const update = mutation({
+export const updateTaskStatus = mutation({
   args: {
-    id: v.id("tasks"),
-    status: v.optional(v.union(
-      v.literal("pending"),
-      v.literal("in_progress"),
-      v.literal("needs_approval"),
-      v.literal("completed"),
-      v.literal("failed")
-    )),
+    taskId: v.id("tasks"),
+    status: v.union(v.literal("pending"), v.literal("running"), v.literal("needs_approval"), v.literal("completed"), v.literal("failed")),
     output: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { id, ...patch } = args;
-    const clean: any = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined));
-    if (clean.status === "completed") clean.completedAt = Date.now();
-    await ctx.db.patch(id, clean);
+    const updates: Record<string, unknown> = { status: args.status };
+    if (args.output !== undefined) updates.output = args.output;
+    if (args.status === "completed" || args.status === "failed") {
+      updates.completedAt = Date.now();
+    }
+    await ctx.db.patch(args.taskId, updates);
   },
 });
