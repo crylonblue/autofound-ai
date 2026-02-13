@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
+import { useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { useEffect, useRef } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -19,11 +23,32 @@ const nav = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+function UserSync() {
+  const { user, isLoaded } = useUser();
+  const createOrGetUser = useMutation(api.users.createOrGetUser);
+  const synced = useRef(false);
+
+  useEffect(() => {
+    if (isLoaded && user && !synced.current) {
+      synced.current = true;
+      createOrGetUser({
+        clerkId: user.id,
+        email: user.primaryEmailAddress?.emailAddress ?? "",
+        name: user.fullName ?? undefined,
+        imageUrl: user.imageUrl ?? undefined,
+      }).catch(() => {});
+    }
+  }, [isLoaded, user, createOrGetUser]);
+
+  return null;
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
     <div className="flex h-screen bg-[#0a0a0a] text-white">
+      <UserSync />
       {/* Sidebar */}
       <aside className="w-64 border-r border-white/10 flex flex-col">
         <div className="p-6 border-b border-white/10">
