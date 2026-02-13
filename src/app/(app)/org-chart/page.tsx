@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import {
   ReactFlow,
   Background,
@@ -17,7 +17,7 @@ import {
   NodeProps,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { Plus, Save } from "lucide-react";
 
 // Custom agent node
 function AgentNode({ data }: NodeProps) {
