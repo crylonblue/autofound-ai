@@ -24,18 +24,19 @@
                             │               │
                ┌────────────▼──┐    ┌───────▼────────────┐
                │ CF Workers    │    │ Fly.io Machines     │
-               │ (simple tasks)│    │ (complex tasks,     │
-               │ ~0ms cold     │    │  code execution)    │
-               │ start         │    │  ~300ms cold start  │
-               └──┬────┬───┬──┘    └──┬────┬───┬────────┘
-                  │    │   │          │    │   │
-          ┌───────▼┐ ┌▼───▼──┐  ┌────▼┐ ┌▼───▼──┐
-          │  R2    │ │ LLM   │  │ R2  │ │ LLM   │
-          │ (files)│ │ APIs  │  │     │ │ APIs  │
-          │        │ │(BYOK) │  │     │ │(BYOK) │
-          └────────┘ └───────┘  └─────┘ └───────┘
-
-  KV ← hot cache (agent status, heartbeats, rate limits)
+               │ (dispatcher   │    │ (ALL agent          │
+               │  + webhooks)  │    │  execution)         │
+               │  ~0ms cold    │    │  ~300ms cold start  │
+               │  start        │    │  shared-cpu-1x      │
+               └──┬────────┬──┘    └──┬────┬───┬────────┘
+                  │        │          │    │   │
+                  ▼        │   ┌──────▼┐ ┌▼───▼──┐
+              webhooks     │   │  R2   │ │ LLM   │
+              routing      │   │(files)│ │ APIs  │
+              health       │   │      │ │(BYOK) │
+                           │   └──────┘ └───────┘
+                           │
+                      KV ← hot cache (agent status, heartbeats, rate limits)
 ```
 
 ---
@@ -46,20 +47,35 @@
 |-------|--------|-----|
 | **Frontend** | Next.js + Clerk | Already built. Clerk handles auth, orgs, RBAC |
 | **Orchestrator** | Convex | Already deployed (`prod:calm-robin-588`). Built-in scheduling, task queues via tables, real-time subscriptions power the dashboard. Single source of truth |
-| **Agent Runtime (simple)** | Cloudflare Workers | ~0ms cold start, wall-clock time is free (only CPU counts), native R2 access. $5/mo for millions of runs |
-| **Agent Runtime (complex)** | Fly.io Machines | Full Linux VM, any language/binary, ~300ms cold start, pay-per-second. For code execution, shell tools |
+| **Agent Runtime** | Fly.io Machines | Every agent runs in a Fly.io Machine (shared-cpu-1x, 256MB–1GB RAM). Full Linux environment, any language/binary. Pay-per-second, auto-stop on idle. ~$0.003/hr per machine |
+| **Dispatcher** | Cloudflare Workers | Thin layer only — receives webhooks, routes tasks to Fly.io, health checks. Does NOT run agents |
 | **Structured Data** | Convex | Users, orgs, agents, tasks, sessions, permissions, billing |
 | **File/Blob Storage** | Cloudflare R2 | Agent memory, conversation history, workspace files, documents. Zero egress. 10GB free |
 | **Hot Cache** | Cloudflare KV | Agent status, heartbeats, session tokens, feature flags. ~25ms global reads |
 | **Auth** | Clerk | SSO, orgs, RBAC — integrated with Next.js and Convex |
-| **BYOK Encryption** | Envelope encryption | Master key in Worker env → per-org DEKs in Convex → encrypted API keys in Convex |
+| **BYOK Encryption** | Envelope encryption | Master key in env → per-org DEKs in Convex → encrypted API keys in Convex |
 | **Code Execution** | E2B (Phase 2) | Ephemeral sandboxes, ~500ms cold start, full Python/Node/shell |
 
 ---
 
-## 3. Data Flow
+## 3. Agent Base Images
 
-**User creates a task → agent executes → results appear in real-time:**
+Pre-built Docker images per role. All agents run from these:
+
+| Image | Base | Contents |
+|-------|------|----------|
+| `autofound/agent-base` | Ubuntu 24.04 | Python 3.12, Node 22, npm, git, curl, jq |
+| `autofound/agent-dev` | extends `agent-base` | + build-essential, Docker CLI, Go, Rust toolchain |
+| `autofound/agent-marketer` | extends `agent-base` | + Playwright, pandas, beautifulsoup4, matplotlib |
+| `autofound/agent-general` | = `agent-base` | Base image covers most use cases |
+
+Images stored in Fly.io registry. Rebuilt weekly or on dependency updates.
+
+---
+
+## 4. Data Flow
+
+**User creates a task → agent executes in Fly.io container → results appear in real-time:**
 
 ```
 1. User clicks "Run task" in dashboard
@@ -71,24 +87,24 @@
 3. Convex action (executor.dispatch):
        │  → reads agent config + encrypted API key from Convex
        │  → decrypts API key (master key → DEK → plaintext)
-       │  → HTTP POST to CF Worker with { taskId, agentId, orgId, apiKey }
+       │  → HTTP POST to Fly.io Machines API:
+       │    { image: "autofound/agent-base", env: { TASK_ID, AGENT_ID, API_KEY } }
        │
-4. CF Worker boots (~0ms):
+4. Fly.io Machine boots (~300ms):
        │  → pulls context from R2: SOUL.md, MEMORY.md, recent history
        │  → builds system prompt (persona + tools + context)
        │
-5. Agent loop:
-       │  → calls LLM API with user's API key
-       │  → LLM returns tool calls → Worker executes tools
+5. Agent tool loop (inside container):
+       │  → calls LLM API with user's BYOK key
+       │  → LLM returns tool calls → agent executes tools (full Linux env)
        │  → tool results fed back to LLM
        │  → repeat until LLM produces final answer
-       │  (wall-clock time waiting on LLM is free on CF Workers)
        │
-6. Worker writes results:
+6. Container writes results:
        │  → R2: updated MEMORY.md, workspace files, artifacts
        │  → Convex mutation: task.complete({ result, messages })
        │
-7. Worker dies (stateless, ephemeral)
+7. Machine auto-stops after idle timeout (stateless, ephemeral)
        │
 8. Convex subscription fires → UI updates in real-time
        └── Dashboard shows: task complete ✅ + results
@@ -96,7 +112,7 @@
 
 ---
 
-## 4. State Management
+## 5. State Management
 
 ### Split by Store
 
@@ -152,7 +168,7 @@
 
 ---
 
-## 5. Agent Design
+## 6. Agent Design
 
 ### Tool Loop
 
@@ -166,7 +182,7 @@
 │     └─ tool_call → execute tool │      │
 │        → feed result back ──────┼──────┘
 │  5. Write results               │
-│  6. Die                         │
+│  6. Machine auto-stops          │
 └─────────────────────────────────┘
 ```
 
@@ -184,7 +200,8 @@
 |------|---------|-------|
 | `file_read` / `file_write` | R2 API | `/{orgId}/agents/{agentId}/` |
 | `web_search` | Tavily API | Platform key |
-| `web_fetch` | `fetch()` in Worker | Returns markdown |
+| `web_fetch` | `fetch()` in container | Returns markdown |
+| `shell_exec` | Container shell | Full Linux env (Fly.io) |
 | `agent_message` | Convex mutation | Post to another agent's queue |
 | `memory_write` | R2 API | Append daily log or update MEMORY.md |
 
@@ -195,7 +212,7 @@ Agents communicate via **Convex task queue** (not direct connections):
 ```
 CEO Agent → createTask(to: "research-agent", message: "Research competitor X")
   → Convex stores task (pending)
-  → Scheduler triggers research-agent Worker
+  → Scheduler triggers Fly.io Machine for research-agent
   → Research Agent runs, writes result
   → CEO Agent picks up result on next run (or triggered via subscription)
 ```
@@ -210,15 +227,21 @@ CEO Agent → createTask(to: "research-agent", message: "Research competitor X")
 
 ---
 
-## 6. Scaling & Cost Estimates
+## 7. Scaling & Cost Estimates
 
-### Compute (CF Workers — agent execution)
+### Compute (Fly.io Machines — all agent execution)
 
-| Scale | Runs/month | CPU-ms/run | Monthly Cost |
-|-------|-----------|-----------|-------------|
-| 10 agents | ~3,000 | 50ms | **~$5** (base plan) |
-| 100 agents | ~100,000 | 50ms | **~$5.40** |
-| 1,000 agents | ~1,500,000 | 50ms | **~$20** |
+| Scale | Tasks/month | Avg duration | Monthly Cost |
+|-------|------------|-------------|-------------|
+| 10 agents | ~3,000 | 5 min | **~$0.75** |
+| 100 agents | ~30,000 | 5 min | **~$7.50** |
+| 1,000 agents | ~300,000 | 5 min | **~$75** |
+
+> ~$0.003/hr per machine (shared-cpu-1x, 256MB). 100 agents × 10 tasks/day × 5 min avg = ~$7.50/mo
+
+### Dispatcher (CF Workers — webhooks + routing only)
+
+Minimal cost. $5/mo base plan covers millions of dispatch calls.
 
 ### Storage (R2 + KV)
 
@@ -240,15 +263,15 @@ CEO Agent → createTask(to: "research-agent", message: "Research competitor X")
 
 | Scale | Compute | Storage | Orchestrator | **Total** |
 |-------|---------|---------|-------------|-----------|
-| **10 agents** | $5 | $0 | $0 | **~$5/mo** |
-| **100 agents** | $5 | $0 | $0 | **~$5/mo** |
-| **1,000 agents** | $20 | $14 | $25 | **~$59/mo** |
+| **10 agents** | $1 | $0 | $0 | **~$1/mo** |
+| **100 agents** | $8 | $0 | $0 | **~$8/mo** |
+| **1,000 agents** | $75 | $14 | $25 | **~$114/mo** |
 
 > Note: LLM API costs are paid by users (BYOK). These are platform infrastructure costs only.
 
 ---
 
-## 7. MVP Scope — Phase 1 (2 Weeks)
+## 8. MVP Scope — Phase 1 (2 Weeks)
 
 ### Week 1: Foundation
 
@@ -257,9 +280,10 @@ CEO Agent → createTask(to: "research-agent", message: "Research competitor X")
 - [ ] **Task creation UI** — simple form: pick agent, write instruction, submit
 - [ ] **Convex schema** — `agents`, `tasks`, `apiKeys`, `agentSessions` tables
 
-### Week 2: Execution
+### Week 2: Execution (Fly.io + Docker)
 
-- [ ] **CF Worker agent runtime** — boots, loads context from R2, runs LLM loop, writes results
+- [ ] **Dockerfiles for agent base images** — `agent-base`, `agent-dev`, `agent-marketer` images built and pushed to Fly registry
+- [ ] **Fly.io agent runtime** — Convex dispatches task → Fly API boots machine from image → agent runs tool loop → writes results → machine auto-stops
 - [ ] **Task results display** — real-time via Convex subscriptions (pending → running → complete)
 - [ ] **Basic org chart** — visual hierarchy, CEO can delegate tasks to subordinates
 - [ ] **Agent-to-agent delegation** — agent can create sub-tasks for other agents via `agent_message` tool
@@ -268,25 +292,23 @@ CEO Agent → createTask(to: "research-agent", message: "Research competitor X")
 
 | Feature | Why Not | When |
 |---------|---------|------|
-| Code execution sandbox | Complexity (E2B integration) | Phase 2 |
+| Code execution sandbox | E2B integration complexity | Phase 2 |
 | RAG / memory search | Needs embeddings pipeline | Phase 2 |
 | Advanced scheduling (cron) | Manual triggers sufficient for MVP | Phase 2 |
-| Fly.io runtime | CF Workers sufficient for simple tasks | Phase 2 |
 | File upload / document processing | Scope creep | Phase 2 |
 | Usage tracking / billing | Premature | Phase 3 |
 
 ---
 
-## 8. Phase 2 Ideas
+## 9. Phase 2 Ideas
 
 | Feature | Implementation | Value |
 |---------|---------------|-------|
 | **Code execution** | E2B sandboxes — ephemeral VMs, Python/Node/shell. Agent gets `code_execute` tool | Agents can write and run code, analyze data |
 | **RAG memory search** | Cloudflare Vectorize or Convex vector search. Embed MEMORY.md chunks + daily logs. Inject top-K into context | Agents remember across sessions without loading everything |
-| **Fly.io for complex tasks** | Spin up Fly Machine for tasks needing >128MB RAM, shell access, or long duration. Auto-stop after completion | Handles code execution, data processing, complex workflows |
 | **Agent marketplace** | Pre-built agent templates (researcher, writer, analyst) with SOUL.md + tool configs. One-click deploy | Faster onboarding, community-driven |
 | **Advanced scheduling** | Convex cron triggers — daily/weekly/monthly agent runs. UI for schedule management | Automated reporting, monitoring |
-| **Streaming responses** | WebSocket or SSE from Worker → Convex → UI. Show agent thinking in real-time | Better UX for long-running tasks |
+| **Streaming responses** | WebSocket or SSE from container → Convex → UI. Show agent thinking in real-time | Better UX for long-running tasks |
 | **Audit log** | Log every LLM call, tool use, delegation in Convex. Exportable | Compliance, debugging, trust |
 
 ---
@@ -295,12 +317,14 @@ CEO Agent → createTask(to: "research-agent", message: "Research competitor X")
 
 1. **Convex as single orchestrator** — no additional queue (BullMQ, Temporal, Inngest). Convex already has scheduling, tables-as-queues, and real-time. Revisit at 10K+ concurrent agents.
 
-2. **CF Workers first, Fly.io second** — Workers handle 90% of agent tasks (LLM calls + simple tools). Fly.io only needed for code execution and heavy compute. Keeps costs minimal.
+2. **All agents run on Fly.io Machines** — every agent gets a full Linux container (shared-cpu-1x, 256MB–1GB RAM). This gives agents shell access, filesystem, any runtime — no Worker limitations. CF Workers are thin dispatchers only.
 
 3. **R2 over S3** — zero egress fees matter when agents read files constantly. Native CF integration. Same free tier covers MVP through 100+ agents.
 
-4. **Envelope encryption for BYOK** — master key in Worker env (never in DB), per-org DEKs in Convex. Simple to implement, proper security. Keys decrypted only in Worker memory, never persisted.
+4. **Envelope encryption for BYOK** — master key in env (never in DB), per-org DEKs in Convex. Simple to implement, proper security. Keys decrypted only in container memory, never persisted.
 
 5. **Stateless agents** — no long-lived processes. Boot → work → die. All state in R2 + Convex. Scales infinitely, costs nothing when idle.
 
 6. **Convex task queue for multi-agent** — agents don't talk directly. They post tasks to Convex, which triggers the target agent. Simple, debuggable, auditable.
+
+7. **Pre-built Docker images per role** — `agent-base`, `agent-dev`, `agent-marketer`. Fast boot times (~300ms), consistent environments, easy to extend.
