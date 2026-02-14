@@ -50,6 +50,39 @@ export default defineSchema({
     completedAt: v.optional(v.number()),
   }).index("by_user", ["userId"]).index("by_agent", ["agentId"]),
 
+  // Agent runs (Fly.io machine tracking)
+  agentRuns: defineTable({
+    userId: v.id("users"),
+    taskId: v.id("tasks"),
+    agentId: v.id("agents"),
+    machineId: v.optional(v.string()),
+    status: v.union(
+      v.literal("queued"),
+      v.literal("starting"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed"),
+      v.literal("cancelled")
+    ),
+    // Streaming progress
+    progressText: v.optional(v.string()),
+    toolCalls: v.optional(v.array(v.object({
+      tool: v.string(),
+      args: v.optional(v.string()),
+      result: v.optional(v.string()),
+      timestamp: v.number(),
+    }))),
+    // Token usage
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    // Final output
+    output: v.optional(v.string()),
+    error: v.optional(v.string()),
+    startedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_task", ["taskId"]).index("by_user", ["userId"]),
+
   // Org chart connections
   orgConnections: defineTable({
     userId: v.id("users"),
