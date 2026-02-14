@@ -1,6 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { useUser } from "@clerk/nextjs";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import type { Id } from "../../../../convex/_generated/dataModel";
 import {
   ReactFlow,
   Background,
@@ -15,9 +19,10 @@ import {
   Node,
   Edge,
   NodeProps,
+  NodeChange,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { Plus, Save } from "lucide-react";
+import { Plus, Save, Loader2, Check } from "lucide-react";
 
 // Custom agent node
 function AgentNode({ data }: NodeProps) {
@@ -47,58 +52,101 @@ function AgentNode({ data }: NodeProps) {
 
 const nodeTypes = { agent: AgentNode };
 
-// Founder node at the top
-const founderNode: Node = {
-  id: "founder",
-  type: "agent",
-  position: { x: 400, y: 0 },
-  data: { label: "You", role: "Founder", icon: "👤", color: "#ffffff", status: "active" },
-};
-
-const initialNodes: Node[] = [
-  founderNode,
-  {
-    id: "ceo",
-    type: "agent",
-    position: { x: 400, y: 150 },
-    data: { label: "CEO Agent", role: "CEO", icon: "👔", color: "#3b82f6", status: "active" },
-  },
-  {
-    id: "writer",
-    type: "agent",
-    position: { x: 150, y: 320 },
-    data: { label: "Content Writer", role: "Writer", icon: "✍️", color: "#8b5cf6", status: "active" },
-  },
-  {
-    id: "seo",
-    type: "agent",
-    position: { x: 650, y: 320 },
-    data: { label: "SEO Specialist", role: "SEO", icon: "🔍", color: "#10b981", status: "active" },
-  },
-];
-
-const initialEdges: Edge[] = [
-  { id: "e-founder-ceo", source: "founder", target: "ceo", animated: true, style: { stroke: "#3b82f6", strokeWidth: 2 } },
-  { id: "e-ceo-writer", source: "ceo", target: "writer", animated: true, style: { stroke: "#8b5cf6", strokeWidth: 2 } },
-  { id: "e-ceo-seo", source: "ceo", target: "seo", animated: true, style: { stroke: "#10b981", strokeWidth: 2 } },
-  { id: "e-writer-seo", source: "writer", target: "seo", type: "default", style: { stroke: "#ffffff20", strokeWidth: 1, strokeDasharray: "5 5" }, label: "peers" },
-];
-
-const agentTemplates = [
-  { name: "Developer", role: "Developer", icon: "💻", color: "#f59e0b", department: "engineering" },
-  { name: "Sales Agent", role: "Sales", icon: "🤝", color: "#ef4444", department: "sales" },
-  { name: "Bookkeeper", role: "Finance", icon: "📊", color: "#06b6d4", department: "finance" },
-  { name: "HR Manager", role: "HR", icon: "👥", color: "#ec4899", department: "hr" },
-  { name: "Customer Support", role: "Support", icon: "💬", color: "#14b8a6", department: "support" },
-];
-
 export default function OrgChartPage() {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const { user } = useUser();
+  const clerkId = user?.id;
+
+  // Convex queries
+  const agents = useQuery(api.agents.listAgentsByClerk, clerkId ? { clerkId } : "skip");
+  const connections = useQuery(api.orgChart.getConnectionsByClerk, clerkId ? { clerkId } : "skip");
+  const positions = useQuery(api.orgChart.getPositionsByClerk, clerkId ? { clerkId } : "skip");
+
+  // Convex mutations
+  const saveConnections = useMutation(api.orgChart.saveConnectionsByClerk);
+  const savePositions = useMutation(api.orgChart.savePositionsByClerk);
+
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [showAddPanel, setShowAddPanel] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  // Build nodes from agents + founder node when data loads
+  useEffect(() => {
+    if (!agents || !connections || !positions) return;
+    if (initialized) return;
+
+    const posMap = new Map<string, { x: number; y: number }>();
+    for (const p of positions) {
+      posMap.set(p.nodeKey, { x: p.x, y: p.y });
+    }
+
+    const founderPos = posMap.get("founder") ?? { x: 400, y: 0 };
+    const flowNodes: Node[] = [
+      {
+        id: "founder",
+        type: "agent",
+        position: founderPos,
+        data: { label: "You", role: "Founder", icon: "👤", color: "#ffffff", status: "active" },
+      },
+    ];
+
+    agents.forEach((agent, i) => {
+      const defaultPos = { x: 150 + (i % 4) * 200, y: 150 + Math.floor(i / 4) * 170 };
+      const pos = posMap.get(agent._id) ?? defaultPos;
+      flowNodes.push({
+        id: agent._id,
+        type: "agent",
+        position: pos,
+        data: {
+          label: agent.name,
+          role: agent.role,
+          icon: agent.icon,
+          color: agent.color,
+          status: agent.status,
+        },
+      });
+    });
+
+    const flowEdges: Edge[] = connections.map((conn) => ({
+      id: `e-${conn.parentAgentId}-${conn.childAgentId}`,
+      source: conn.parentAgentId,
+      target: conn.childAgentId,
+      animated: true,
+      style: { stroke: "#3b82f6", strokeWidth: 2 },
+    }));
+
+    // If no connections saved yet, auto-connect founder to all agents
+    if (connections.length === 0 && agents.length > 0) {
+      agents.forEach((agent) => {
+        flowEdges.push({
+          id: `e-founder-${agent._id}`,
+          source: "founder",
+          target: agent._id,
+          animated: true,
+          style: { stroke: agent.color + "80", strokeWidth: 2 },
+        });
+      });
+    }
+
+    setNodes(flowNodes);
+    setEdges(flowEdges);
+    setInitialized(true);
+  }, [agents, connections, positions, initialized, setNodes, setEdges]);
+
+  // Track dirty state on node/edge changes after init
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      onNodesChange(changes);
+      if (initialized) setDirty(true);
+    },
+    [onNodesChange, initialized]
+  );
 
   const onConnect = useCallback(
-    (connection: Connection) =>
+    (connection: Connection) => {
       setEdges((eds) =>
         addEdge(
           {
@@ -108,26 +156,72 @@ export default function OrgChartPage() {
           },
           eds
         )
-      ),
+      );
+      setDirty(true);
+    },
     [setEdges]
   );
 
-  const addAgent = (template: typeof agentTemplates[0]) => {
-    const newNode: Node = {
-      id: `agent-${Date.now()}`,
-      type: "agent",
-      position: { x: 200 + Math.random() * 400, y: 300 + Math.random() * 200 },
-      data: {
-        label: template.name,
-        role: template.role,
-        icon: template.icon,
-        color: template.color,
-        status: "active",
-      },
-    };
-    setNodes((nds) => [...nds, newNode]);
-    setShowAddPanel(false);
-  };
+  const handleSave = useCallback(async () => {
+    if (!clerkId) return;
+    setSaving(true);
+    try {
+      // Extract connections from edges (skip edges involving "founder" as parent — founder isn't an agent ID)
+      const conns = edges
+        .filter((e) => e.source !== "founder" && e.target !== "founder")
+        .map((e) => ({
+          parentAgentId: e.source as Id<"agents">,
+          childAgentId: e.target as Id<"agents">,
+        }));
+
+      // For founder connections, we store them too — use a special convention:
+      // edges FROM founder → target means the founder oversees that agent
+      // We'll skip these in orgConnections (founder isn't an agent) 
+      // but we could model them via reportsTo on agents instead.
+      // For now, save only agent-to-agent connections.
+      
+      await saveConnections({ clerkId, connections: conns });
+
+      // Save positions
+      const posArr = nodes.map((n) => ({
+        nodeKey: n.id,
+        x: n.position.x,
+        y: n.position.y,
+      }));
+      await savePositions({ clerkId, positions: posArr });
+
+      setDirty(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error("Failed to save org chart:", err);
+    } finally {
+      setSaving(false);
+    }
+  }, [clerkId, edges, nodes, saveConnections, savePositions]);
+
+  // Loading state
+  if (!agents || !connections || !positions) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
+      </div>
+    );
+  }
+
+  if (agents.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-2xl mb-2">🏗️</p>
+          <h2 className="text-lg font-semibold mb-1">No agents yet</h2>
+          <p className="text-sm text-zinc-500">
+            <a href="/agents" className="text-blue-400 hover:underline">Hire some agents</a> first, then organize them here.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -139,48 +233,35 @@ export default function OrgChartPage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => setShowAddPanel(!showAddPanel)}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-600 rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors"
+            onClick={handleSave}
+            disabled={saving || !dirty}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              saved
+                ? "bg-emerald-600 text-white"
+                : dirty
+                ? "bg-blue-600 hover:bg-blue-500 text-white"
+                : "bg-white/5 border border-white/10 text-zinc-500 cursor-default"
+            }`}
           >
-            <Plus className="w-4 h-4" />
-            Add Agent
-          </button>
-          <button className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm hover:bg-white/10 transition-colors">
-            <Save className="w-4 h-4" />
-            Save
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : saved ? (
+              <Check className="w-4 h-4" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {saving ? "Saving…" : saved ? "Saved!" : "Save"}
           </button>
         </div>
       </div>
-
-      {/* Add agent panel */}
-      {showAddPanel && (
-        <div className="absolute top-20 right-4 z-20 bg-[#111] border border-white/10 rounded-xl p-4 w-64 shadow-2xl">
-          <h3 className="font-semibold text-sm mb-3">Add Agent</h3>
-          <div className="space-y-2">
-            {agentTemplates.map((t) => (
-              <button
-                key={t.name}
-                onClick={() => addAgent(t)}
-                className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/5 transition-colors text-left"
-              >
-                <span className="text-lg">{t.icon}</span>
-                <div>
-                  <p className="text-sm font-medium">{t.name}</p>
-                  <p className="text-xs text-zinc-500">{t.department}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* React Flow Canvas */}
       <div className="flex-1">
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
+          onNodesChange={handleNodesChange}
+          onEdgesChange={(changes) => { onEdgesChange(changes); if (initialized) setDirty(true); }}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
           fitView

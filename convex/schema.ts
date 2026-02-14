@@ -56,4 +56,13 @@ export default defineSchema({
     parentAgentId: v.id("agents"),
     childAgentId: v.id("agents"),
   }).index("by_user", ["userId"]),
+
+  // Org chart node positions (persisted layout)
+  orgNodePositions: defineTable({
+    userId: v.id("users"),
+    // "founder" for the user node, or agent._id for agents
+    nodeKey: v.string(),
+    x: v.number(),
+    y: v.number(),
+  }).index("by_user", ["userId"]),
 });
