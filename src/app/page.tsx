@@ -37,7 +37,7 @@ function OrgNode({ icon, label, sub, color, mini, pulse, glow = true }: {
 
 function CTAButtons({ className = "", center = false }: { className?: string; center?: boolean }) {
   return (
-    <div className={`flex gap-4 ${center ? "justify-center" : ""} ${className}`}>
+    <div className={`flex flex-col sm:flex-row gap-4 ${center ? "items-center sm:justify-center" : ""} ${className}`}>
       <Link
         href="/sign-up"
         className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition"
@@ -144,6 +144,29 @@ const comparisons = [
 
 /* ───────────────────────── page ───────────────────────── */
 
+function MobileMenu() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(!open)} className="sm:hidden p-2 text-zinc-400 hover:text-white" aria-label="Menu">
+        <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d={open ? "M6 6l12 12M6 18L18 6" : "M4 7h16M4 12h16M4 17h16"} /></svg>
+      </button>
+      {open && (
+        <div className="absolute top-16 left-0 right-0 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5 p-4 flex flex-col gap-4 sm:hidden z-50">
+          <a href="#how" onClick={() => setOpen(false)} className="text-zinc-300 hover:text-white">How it works</a>
+          <a href="#agents" onClick={() => setOpen(false)} className="text-zinc-300 hover:text-white">Agents</a>
+          <a href="#pricing" onClick={() => setOpen(false)} className="text-zinc-300 hover:text-white">Pricing</a>
+          <a href="#faq" onClick={() => setOpen(false)} className="text-zinc-300 hover:text-white">FAQ</a>
+          <div className="flex gap-3 pt-2 border-t border-white/10">
+            <Link href="/sign-in" className="text-sm text-zinc-400 hover:text-white">Sign in</Link>
+            <Link href="/sign-up" className="text-sm px-4 py-2 bg-blue-600 rounded-lg font-medium">Get started</Link>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
@@ -159,7 +182,7 @@ export default function Home() {
             <a href="#pricing" className="hover:text-white transition">Pricing</a>
             <a href="#faq" className="hover:text-white transition">FAQ</a>
           </div>
-          <div className="flex gap-3">
+          <div className="hidden sm:flex gap-3">
             <Link href="/sign-in" className="text-sm px-4 py-2 text-zinc-400 hover:text-white transition">
               Sign in
             </Link>
@@ -167,6 +190,7 @@ export default function Home() {
               Get started
             </Link>
           </div>
+          <MobileMenu />
         </div>
       </nav>
 
@@ -233,43 +257,38 @@ export default function Home() {
           </p>
           {/* Visual Org Chart */}
           <div className="relative max-w-3xl mx-auto">
-            {/* SVG Connection Lines */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
-              {/* Founder to CEO */}
+            {/* SVG Connection Lines — hidden on mobile */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none hidden sm:block" style={{ zIndex: 0 }}>
               <line x1="50%" y1="52" x2="50%" y2="100" stroke="#3b82f6" strokeWidth="2" strokeOpacity="0.4" />
-              {/* CEO to CMO/CFO/CTO */}
               <line x1="50%" y1="152" x2="16.6%" y2="200" stroke="#10b981" strokeWidth="2" strokeOpacity="0.3" />
               <line x1="50%" y1="152" x2="50%" y2="200" stroke="#f59e0b" strokeWidth="2" strokeOpacity="0.3" />
               <line x1="50%" y1="152" x2="83.3%" y2="200" stroke="#a855f7" strokeWidth="2" strokeOpacity="0.3" />
-              {/* CMO to Writer/SEO */}
               <line x1="16.6%" y1="252" x2="8.3%" y2="300" stroke="#10b981" strokeWidth="1.5" strokeOpacity="0.2" />
               <line x1="16.6%" y1="252" x2="25%" y2="300" stroke="#10b981" strokeWidth="1.5" strokeOpacity="0.2" />
-              {/* CFO to Books */}
               <line x1="50%" y1="252" x2="50%" y2="300" stroke="#f59e0b" strokeWidth="1.5" strokeOpacity="0.2" />
-              {/* CTO to Dev/QA */}
               <line x1="83.3%" y1="252" x2="75%" y2="300" stroke="#a855f7" strokeWidth="1.5" strokeOpacity="0.2" />
               <line x1="83.3%" y1="252" x2="91.6%" y2="300" stroke="#a855f7" strokeWidth="1.5" strokeOpacity="0.2" />
             </svg>
 
             {/* Row 1: Founder */}
-            <div className="flex justify-center mb-6 relative z-10">
+            <div className="flex justify-center mb-4 sm:mb-6 relative z-10">
               <OrgNode icon="👤" label="You" sub="Founder" color="#ffffff" glow={false} />
             </div>
 
             {/* Row 2: CEO */}
-            <div className="flex justify-center mb-6 relative z-10">
+            <div className="flex justify-center mb-4 sm:mb-6 relative z-10">
               <OrgNode icon="👔" label="CEO Agent" sub="Strategic Oversight" color="#3b82f6" pulse />
             </div>
 
             {/* Row 3: C-Suite */}
-            <div className="grid grid-cols-3 gap-4 mb-6 relative z-10">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6 relative z-10">
               <div className="flex justify-center"><OrgNode icon="📣" label="CMO" sub="Marketing" color="#10b981" /></div>
               <div className="flex justify-center"><OrgNode icon="💰" label="CFO" sub="Finance" color="#f59e0b" /></div>
               <div className="flex justify-center"><OrgNode icon="⚙️" label="CTO" sub="Engineering" color="#a855f7" /></div>
             </div>
 
             {/* Row 4: Workers */}
-            <div className="grid grid-cols-5 gap-2 relative z-10">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 relative z-10">
               <div className="flex justify-center"><OrgNode icon="✍️" label="Writer" color="#10b981" mini /></div>
               <div className="flex justify-center"><OrgNode icon="🔍" label="SEO" color="#10b981" mini /></div>
               <div className="flex justify-center"><OrgNode icon="📊" label="Books" color="#f59e0b" mini /></div>

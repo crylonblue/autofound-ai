@@ -67,7 +67,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
           { label: "Active Agents", value: activeAgents.length, icon: Users, color: "text-blue-400" },
           { label: "Total Tasks", value: tasks?.length ?? 0, icon: ListTodo, color: "text-emerald-400" },
@@ -84,9 +84,9 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Tasks */}
-        <div className="col-span-2 bg-white/[0.03] border border-white/10 rounded-xl">
+        <div className="lg:col-span-2 bg-white/[0.03] border border-white/10 rounded-xl">
           <div className="flex items-center justify-between p-5 border-b border-white/10">
             <h2 className="font-semibold flex items-center gap-2">
               <Activity className="w-4 h-4 text-blue-400" />
