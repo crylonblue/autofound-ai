@@ -14,6 +14,7 @@ import {
 import { useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
+import OnboardingChecklist from "../../components/OnboardingChecklist";
 
 function useClerkUser() {
   return useUser();
@@ -65,6 +66,9 @@ export default function DashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* Onboarding */}
+      <OnboardingChecklist />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

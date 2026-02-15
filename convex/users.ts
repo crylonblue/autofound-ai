@@ -119,6 +119,51 @@ export const getEncryptedKey = internalQuery({
   },
 });
 
+export const dismissOnboarding = mutation({
+  args: { clerkId: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+    if (!user) throw new Error("User not found");
+    await ctx.db.patch(user._id, { onboardingDismissed: true });
+  },
+});
+
+export const getOnboardingState = query({
+  args: { clerkId: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+    if (!user) return null;
+
+    const hasApiKeys = !!(user.apiKeys?.openai || user.apiKeys?.anthropic || user.apiKeys?.google);
+
+    const agents = await ctx.db
+      .query("agents")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    const hasAgents = agents.length > 0;
+
+    const tasks = await ctx.db
+      .query("tasks")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+    const hasTasks = !!tasks;
+
+    return {
+      dismissed: user.onboardingDismissed ?? false,
+      hasApiKeys,
+      hasAgents,
+      hasTasks,
+      allComplete: hasApiKeys && hasAgents && hasTasks,
+    };
+  },
+});
+
 export const getUser = query({
   args: { clerkId: v.string() },
   handler: async (ctx, args) => {

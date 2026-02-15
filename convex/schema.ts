@@ -20,6 +20,7 @@ export default defineSchema({
       anthropic: v.optional(v.string()),
       google: v.optional(v.string()),
     })),
+    onboardingDismissed: v.optional(v.boolean()),
     createdAt: v.number(),
   }).index("by_clerk_id", ["clerkId"]),
 
