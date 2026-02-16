@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import LazyAgentModel from "./components/LazyAgentModel";
+import TerminalDemo from "./components/TerminalDemo";
 
 /* ───────────────────────── components ───────────────────────── */
 
@@ -226,6 +227,9 @@ export default function Home() {
           </p>
         </div>
       </section>
+
+      {/* ─── Terminal Demo ─── */}
+      <TerminalDemo />
 
       {/* ─── How it works ─── */}
       <section id="how" className="py-24 px-6">
