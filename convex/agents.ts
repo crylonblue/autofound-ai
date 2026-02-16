@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 
 export const getAgent = query({
   args: { agentId: v.id("agents") },
@@ -51,11 +52,19 @@ export const createAgentByClerk = mutation({
       .first();
     if (!user) throw new Error("User not found");
     const { clerkId: _, ...rest } = args;
-    return await ctx.db.insert("agents", {
+    const agentId = await ctx.db.insert("agents", {
       ...rest,
       userId: user._id,
       createdAt: Date.now(),
     });
+    // Initialize R2 memory files for the new agent
+    await ctx.scheduler.runAfter(0, api.r2.initAgentFiles, {
+      clerkId: args.clerkId,
+      agentId: agentId,
+      agentName: args.name,
+      systemPrompt: args.systemPrompt,
+    });
+    return agentId;
   },
 });
 

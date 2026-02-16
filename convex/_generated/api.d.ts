@@ -13,7 +13,9 @@ import type * as agents from "../agents.js";
 import type * as crypto from "../crypto.js";
 import type * as execute from "../execute.js";
 import type * as flyOrchestrator from "../flyOrchestrator.js";
+import type * as messages from "../messages.js";
 import type * as orgChart from "../orgChart.js";
+import type * as r2 from "../r2.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
 
@@ -29,7 +31,9 @@ declare const fullApi: ApiFromModules<{
   crypto: typeof crypto;
   execute: typeof execute;
   flyOrchestrator: typeof flyOrchestrator;
+  messages: typeof messages;
   orgChart: typeof orgChart;
+  r2: typeof r2;
   tasks: typeof tasks;
   users: typeof users;
 }>;

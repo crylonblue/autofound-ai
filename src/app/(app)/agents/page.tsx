@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Search, Play, Pause, Trash2, X, Edit2, Loader2 } from "lucide-react";
+import { Plus, Search, Play, Pause, Trash2, X, Edit2, Loader2, MessageSquare } from "lucide-react";
+import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
@@ -224,7 +225,14 @@ export default function AgentsPage() {
               <span className="text-xs text-zinc-600">·</span>
               <span className="text-xs text-zinc-500">{MODELS.find(m => m.value === agent.model)?.label ?? agent.model ?? "Default"}</span>
             </div>
-            <p className="text-xs text-zinc-500 line-clamp-2">{agent.systemPrompt}</p>
+            <p className="text-xs text-zinc-500 line-clamp-2 mb-3">{agent.systemPrompt}</p>
+            <Link
+              href={`/agents/${agent._id}/chat`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 text-blue-400 rounded-lg text-xs font-medium hover:bg-blue-600/30 transition-colors"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              Chat
+            </Link>
           </div>
         ))}
       </div>

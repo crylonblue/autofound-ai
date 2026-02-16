@@ -84,6 +84,20 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_task", ["taskId"]).index("by_user", ["userId"]),
 
+  // Chat messages
+  messages: defineTable({
+    agentId: v.id("agents"),
+    clerkId: v.string(),
+    role: v.union(v.literal("user"), v.literal("agent"), v.literal("system")),
+    content: v.string(),
+    timestamp: v.number(),
+    toolCalls: v.optional(v.array(v.object({
+      tool: v.string(),
+      args: v.optional(v.string()),
+      result: v.optional(v.string()),
+    }))),
+  }).index("by_agent_and_user", ["agentId", "clerkId"]),
+
   // Org chart connections
   orgConnections: defineTable({
     userId: v.id("users"),
