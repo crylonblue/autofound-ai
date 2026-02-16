@@ -10,9 +10,13 @@
 
 import type * as agentRuns from "../agentRuns.js";
 import type * as agents from "../agents.js";
+import type * as crons from "../crons.js";
 import type * as crypto from "../crypto.js";
 import type * as execute from "../execute.js";
 import type * as flyOrchestrator from "../flyOrchestrator.js";
+import type * as heartbeatRunner from "../heartbeatRunner.js";
+import type * as heartbeatScheduler from "../heartbeatScheduler.js";
+import type * as heartbeats from "../heartbeats.js";
 import type * as messages from "../messages.js";
 import type * as orgChart from "../orgChart.js";
 import type * as r2 from "../r2.js";
@@ -28,9 +32,13 @@ import type {
 declare const fullApi: ApiFromModules<{
   agentRuns: typeof agentRuns;
   agents: typeof agents;
+  crons: typeof crons;
   crypto: typeof crypto;
   execute: typeof execute;
   flyOrchestrator: typeof flyOrchestrator;
+  heartbeatRunner: typeof heartbeatRunner;
+  heartbeatScheduler: typeof heartbeatScheduler;
+  heartbeats: typeof heartbeats;
   messages: typeof messages;
   orgChart: typeof orgChart;
   r2: typeof r2;

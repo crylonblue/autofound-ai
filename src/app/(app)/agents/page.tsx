@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Search, Play, Pause, Trash2, X, Edit2, Loader2, MessageSquare } from "lucide-react";
+import { Plus, Search, Play, Pause, Trash2, X, Edit2, Loader2, MessageSquare, Heart } from "lucide-react";
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
@@ -48,6 +48,8 @@ export default function AgentsPage() {
   const clerkId = clerkUser?.id ?? "";
 
   const agents = useQuery(api.agents.listAgentsByClerk, clerkId ? { clerkId } : "skip");
+  const heartbeats = useQuery(api.heartbeats.listByUser, clerkId ? { clerkId } : "skip");
+  const togglePause = useMutation(api.heartbeats.togglePause);
   const createAgent = useMutation(api.agents.createAgentByClerk);
   const updateAgent = useMutation(api.agents.updateAgent);
   const deleteAgent = useMutation(api.agents.deleteAgent);
@@ -148,6 +150,20 @@ export default function AgentsPage() {
     return <div className="p-8 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-zinc-400" /></div>;
   }
 
+  const heartbeatMap = new Map(
+    (heartbeats ?? []).map((hb) => [hb?.agentId, hb])
+  );
+
+  const formatTimeAgo = (ts?: number) => {
+    if (!ts) return "Never";
+    const mins = Math.round((Date.now() - ts) / 60000);
+    if (mins < 1) return "Just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.round(hrs / 24)}d ago`;
+  };
+
   const filtered = agents?.filter(
     (a) =>
       a.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -226,6 +242,34 @@ export default function AgentsPage() {
               <span className="text-xs text-zinc-500">{MODELS.find(m => m.value === agent.model)?.label ?? agent.model ?? "Default"}</span>
             </div>
             <p className="text-xs text-zinc-500 line-clamp-2 mb-3">{agent.systemPrompt}</p>
+            {/* Heartbeat status */}
+            {(() => {
+              const hb = heartbeatMap.get(agent._id);
+              if (!hb) return null;
+              return (
+                <div className="flex items-center gap-2 mb-3">
+                  <button
+                    onClick={() => togglePause({ agentId: agent._id })}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-colors ${
+                      hb.status === "active" ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                      : hb.status === "running" ? "bg-blue-500/10 text-blue-400"
+                      : "bg-zinc-500/10 text-zinc-500 hover:bg-zinc-500/20"
+                    }`}
+                    title={hb.status === "paused" ? "Resume heartbeat" : "Pause heartbeat"}
+                  >
+                    {hb.status === "running" ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Heart className={`w-3 h-3 ${hb.status === "active" ? "fill-emerald-400" : ""}`} />
+                    )}
+                    {hb.status === "active" ? "Active" : hb.status === "running" ? "Running" : "Paused"}
+                  </button>
+                  <span className="text-[10px] text-zinc-600">
+                    {hb.lastRun ? `Last: ${formatTimeAgo(hb.lastRun)}` : "No check-ins yet"}
+                  </span>
+                </div>
+              );
+            })()}
             <Link
               href={`/agents/${agent._id}/chat`}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 text-blue-400 rounded-lg text-xs font-medium hover:bg-blue-600/30 transition-colors"

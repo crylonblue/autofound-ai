@@ -105,6 +105,16 @@ export default defineSchema({
     childAgentId: v.id("agents"),
   }).index("by_user", ["userId"]),
 
+  // Heartbeat records for always-on agents
+  heartbeats: defineTable({
+    agentId: v.id("agents"),
+    clerkId: v.string(),
+    lastRun: v.optional(v.number()),
+    lastResult: v.optional(v.string()),
+    status: v.string(), // "active" | "paused" | "running"
+    runCount: v.number(),
+  }).index("by_agent", ["agentId"]).index("by_clerk_id", ["clerkId"]),
+
   // Org chart node positions (persisted layout)
   orgNodePositions: defineTable({
     userId: v.id("users"),

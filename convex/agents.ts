@@ -64,6 +64,13 @@ export const createAgentByClerk = mutation({
       agentName: args.name,
       systemPrompt: args.systemPrompt,
     });
+    // Create heartbeat record
+    await ctx.db.insert("heartbeats", {
+      agentId,
+      clerkId: args.clerkId,
+      status: "active",
+      runCount: 0,
+    });
     return agentId;
   },
 });
@@ -114,6 +121,12 @@ export const updateAgent = mutation({
 export const deleteAgent = mutation({
   args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
+    // Delete heartbeat record
+    const hb = await ctx.db
+      .query("heartbeats")
+      .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
+      .first();
+    if (hb) await ctx.db.delete(hb._id);
     await ctx.db.delete(args.agentId);
   },
 });
