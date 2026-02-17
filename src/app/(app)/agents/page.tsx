@@ -43,7 +43,7 @@ type AgentForm = {
   skills: SkillPackKey[];
 };
 
-const emptyForm: AgentForm = { name: "", role: "", icon: "🤖", color: "#3b82f6", systemPrompt: "", model: "gpt-4o-mini", skills: [...DEFAULT_SKILLS] };
+const emptyForm: AgentForm = { name: "", role: "", icon: "🤖", color: "#3b82f6", systemPrompt: "", model: "claude-opus-4-6", skills: [...DEFAULT_SKILLS] };
 
 export default function AgentsPage() {
   const { user: clerkUser, isLoaded } = useClerkUser();
@@ -71,7 +71,7 @@ export default function AgentsPage() {
       icon: agent.icon,
       color: agent.color,
       systemPrompt: agent.systemPrompt,
-      model: agent.model || "gpt-4o-mini",
+      model: agent.model || "claude-opus-4-6",
       skills: (agent.tools as SkillPackKey[] | undefined) ?? [...DEFAULT_SKILLS],
     });
     setShowEdit(true);
@@ -88,7 +88,7 @@ export default function AgentsPage() {
         icon: t.icon,
         color: t.color,
         systemPrompt: t.systemPrompt,
-        model: "gpt-4o-mini",
+        model: "claude-opus-4-6",
         tools: [...DEFAULT_SKILLS],
         status: "active",
       });

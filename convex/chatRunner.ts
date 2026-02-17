@@ -28,7 +28,7 @@ export const respondToMessage = action({
     });
 
     // Determine provider from agent model, with fallback to any available key
-    let model = agent.model || "gpt-4o-mini";
+    let model = agent.model || "claude-opus-4-6";
     let provider: "openai" | "anthropic" | "google";
     if (model.startsWith("claude")) provider = "anthropic";
     else if (model.startsWith("gemini")) provider = "google";
@@ -39,7 +39,7 @@ export const respondToMessage = action({
     // If preferred provider key is missing, try to fall back to any available key
     if (!encryptedKey) {
       const fallbacks: Array<{ p: "openai" | "anthropic" | "google"; m: string }> = [
-        { p: "anthropic", m: "claude-sonnet-4-20250514" },
+        { p: "anthropic", m: "claude-opus-4-6" },
         { p: "openai", m: "gpt-4o-mini" },
         { p: "google", m: "gemini-1.5-flash" },
       ];
@@ -231,7 +231,10 @@ async function runAnthropicLoop(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
+        // Support both regular API keys (x-api-key) and OAuth tokens (Authorization: Bearer)
+        ...(apiKey.startsWith("sk-ant-")
+          ? { "x-api-key": apiKey }
+          : { "Authorization": `Bearer ${apiKey}` }),
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify(body),
@@ -367,7 +370,7 @@ export const agentToAgentChat = action({
     const user = await ctx.runQuery(api.users.getUser, { clerkId: args.clerkId });
     if (!user) return "Error: User not found.";
 
-    const model = targetAgent.model || "gpt-4o-mini";
+    const model = targetAgent.model || "claude-opus-4-6";
     let provider: "openai" | "anthropic" | "google";
     if (model.startsWith("claude")) provider = "anthropic";
     else if (model.startsWith("gemini")) provider = "google";
