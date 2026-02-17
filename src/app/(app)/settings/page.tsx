@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Key, Globe, Shield, Bell, Save, Eye, EyeOff, CheckCircle2, Trash2, Loader2 } from "lucide-react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
 
@@ -25,7 +25,7 @@ export default function SettingsPage() {
   const clerkId = clerkUser?.id ?? "";
 
   const createOrGetUser = useMutation(api.users.createOrGetUser);
-  const updateApiKey = useMutation(api.users.updateApiKey);
+  const saveEncryptedKey = useAction(api.crypto.saveEncryptedKey);
   const deleteApiKeyMut = useMutation(api.users.deleteApiKey);
   const apiKeys = useQuery(api.users.getApiKeys, clerkId ? { clerkId } : "skip");
 
@@ -47,7 +47,7 @@ export default function SettingsPage() {
     if (!clerkId || !keyInputs[provider]) return;
     setSaving((s) => ({ ...s, [provider]: true }));
     try {
-      await updateApiKey({ clerkId, provider, key: keyInputs[provider] });
+      await saveEncryptedKey({ clerkId, provider, key: keyInputs[provider] });
       setKeyInputs((k) => ({ ...k, [provider]: "" }));
       setSavedMsg((s) => ({ ...s, [provider]: true }));
       setTimeout(() => setSavedMsg((s) => ({ ...s, [provider]: false })), 2000);

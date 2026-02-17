@@ -62,9 +62,7 @@ export const respondToMessage = action({
       return;
     }
 
-    const encryptionKey = process.env.ENCRYPTION_KEY;
-    if (!encryptionKey) throw new Error("ENCRYPTION_KEY not set");
-    const apiKey = decrypt(encryptedKey, encryptionKey);
+    const apiKey = decrypt(encryptedKey);
 
     // Resolve skill pack keys → tool names (backward compat: no skills = all tools)
     const resolvedToolNames = agent.tools && agent.tools.length > 0
