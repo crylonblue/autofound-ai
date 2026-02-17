@@ -3,6 +3,13 @@ import { mutation, query, internalMutation } from "./_generated/server";
 
 // ── Queries ──────────────────────────────────────────────────────────
 
+export const getRunById = query({
+  args: { runId: v.id("agentRuns") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.runId);
+  },
+});
+
 export const getRunByTask = query({
   args: { taskId: v.id("tasks") },
   handler: async (ctx, args) => {

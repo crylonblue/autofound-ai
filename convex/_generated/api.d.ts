@@ -10,6 +10,7 @@
 
 import type * as agentRuns from "../agentRuns.js";
 import type * as agents from "../agents.js";
+import type * as chatRunner from "../chatRunner.js";
 import type * as crons from "../crons.js";
 import type * as crypto from "../crypto.js";
 import type * as execute from "../execute.js";
@@ -32,6 +33,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   agentRuns: typeof agentRuns;
   agents: typeof agents;
+  chatRunner: typeof chatRunner;
   crons: typeof crons;
   crypto: typeof crypto;
   execute: typeof execute;

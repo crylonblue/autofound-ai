@@ -7,6 +7,8 @@ import { useUser } from "@clerk/nextjs";
 import { ArrowLeft, Send, Trash2, Loader2, Info } from "lucide-react";
 import { api } from "../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
+// TODO: Integrate AgentRunViewer when messages support runId field
+// import AgentRunViewer from "../../../../components/AgentRunViewer";
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>();

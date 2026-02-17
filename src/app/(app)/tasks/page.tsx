@@ -6,6 +6,7 @@ import { useMutation, useQuery, useAction } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import AgentRunViewer from "../../components/AgentRunViewer";
 
 function useClerkUser() {
   return useUser();
@@ -37,6 +38,10 @@ export default function TasksPage() {
   const [creating, setCreating] = useState(false);
 
   const selectedTask = tasks?.find((t) => t._id === selectedTaskId);
+  const selectedTaskRun = useQuery(
+    api.agentRuns.getRunByTask,
+    selectedTaskId ? { taskId: selectedTaskId as Id<"tasks"> } : "skip"
+  );
 
   const handleCreate = async () => {
     if (!newTask.title || !newTask.agentId || !clerkId) return;
@@ -189,7 +194,13 @@ export default function TasksPage() {
               </span>
             </div>
 
-            {selectedTask.output && (
+            {selectedTaskRun && (
+              <div className="mb-4">
+                <AgentRunViewer runId={selectedTaskRun._id} />
+              </div>
+            )}
+
+            {selectedTask.output && !selectedTaskRun && (
               <div className="bg-white/[0.03] border border-white/10 rounded-lg p-4 mb-4">
                 <h3 className="text-xs font-semibold text-zinc-400 mb-2">Agent Output</h3>
                 <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono">{selectedTask.output}</pre>
