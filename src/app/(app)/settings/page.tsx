@@ -47,7 +47,7 @@ export default function SettingsPage() {
     if (!clerkId || !keyInputs[provider]) return;
     setSaving((s) => ({ ...s, [provider]: true }));
     try {
-      await saveEncryptedKey({ clerkId, provider, key: keyInputs[provider] });
+      await saveEncryptedKey({ clerkId, provider, key: keyInputs[provider].trim() });
       setKeyInputs((k) => ({ ...k, [provider]: "" }));
       setSavedMsg((s) => ({ ...s, [provider]: true }));
       setTimeout(() => setSavedMsg((s) => ({ ...s, [provider]: false })), 2000);

@@ -62,7 +62,7 @@ export const respondToMessage = action({
       return;
     }
 
-    const apiKey = decrypt(encryptedKey);
+    const apiKey = decrypt(encryptedKey).trim();
 
     // Resolve skill pack keys → tool names (backward compat: no skills = all tools)
     const resolvedToolNames = agent.tools && agent.tools.length > 0
