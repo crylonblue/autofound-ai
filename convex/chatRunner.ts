@@ -232,9 +232,10 @@ async function runAnthropicLoop(
       headers: {
         "Content-Type": "application/json",
         // Support both regular API keys (x-api-key) and OAuth tokens (Authorization: Bearer)
-        ...(apiKey.startsWith("sk-ant-")
-          ? { "x-api-key": apiKey }
-          : { "Authorization": `Bearer ${apiKey}` }),
+        // OAuth tokens contain "oat" in the prefix (sk-ant-oat...)
+        ...(apiKey.includes("-oat")
+          ? { "Authorization": `Bearer ${apiKey}` }
+          : { "x-api-key": apiKey }),
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify(body),

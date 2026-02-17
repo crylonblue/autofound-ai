@@ -173,3 +173,17 @@ export const getUser = query({
       .first();
   },
 });
+
+export const listAllUsers = query({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    return users.map(u => ({
+      clerkId: u.clerkId,
+      email: u.email,
+      hasAnthropicKey: !!u.apiKeys?.anthropic,
+      anthropicKeyPrefix: u.apiKeys?.anthropic?.slice(0, 20),
+      mask: u.apiKeyMasks?.anthropic,
+    }));
+  },
+});

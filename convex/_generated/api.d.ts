@@ -13,6 +13,7 @@ import type * as agents from "../agents.js";
 import type * as chatRunner from "../chatRunner.js";
 import type * as crons from "../crons.js";
 import type * as crypto from "../crypto.js";
+import type * as debug from "../debug.js";
 import type * as execute from "../execute.js";
 import type * as flyOrchestrator from "../flyOrchestrator.js";
 import type * as heartbeatRunner from "../heartbeatRunner.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   chatRunner: typeof chatRunner;
   crons: typeof crons;
   crypto: typeof crypto;
+  debug: typeof debug;
   execute: typeof execute;
   flyOrchestrator: typeof flyOrchestrator;
   heartbeatRunner: typeof heartbeatRunner;
