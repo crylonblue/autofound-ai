@@ -23,6 +23,7 @@ import type * as orgChart from "../orgChart.js";
 import type * as r2 from "../r2.js";
 import type * as tasks from "../tasks.js";
 import type * as tools_index from "../tools/index.js";
+import type * as tools_sendMessageToAgent from "../tools/sendMessageToAgent.js";
 import type * as tools_types from "../tools/types.js";
 import type * as tools_webFetch from "../tools/webFetch.js";
 import type * as tools_webSearch from "../tools/webSearch.js";
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   r2: typeof r2;
   tasks: typeof tasks;
   "tools/index": typeof tools_index;
+  "tools/sendMessageToAgent": typeof tools_sendMessageToAgent;
   "tools/types": typeof tools_types;
   "tools/webFetch": typeof tools_webFetch;
   "tools/webSearch": typeof tools_webSearch;

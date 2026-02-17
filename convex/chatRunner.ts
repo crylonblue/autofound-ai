@@ -5,7 +5,7 @@ import { action } from "./_generated/server";
 import { api } from "./_generated/api";
 import { decrypt } from "./crypto";
 import { ToolDefinition } from "./tools/types";
-import { getEnabledTools, allTools } from "./tools/index";
+import { getEnabledTools, executeToolFromList } from "./tools/index";
 
 const MAX_TOOL_ITERATIONS = 10;
 
@@ -46,8 +46,13 @@ export const respondToMessage = action({
     if (!encryptionKey) throw new Error("ENCRYPTION_KEY not set");
     const apiKey = decrypt(encryptedKey, encryptionKey);
 
-    // Get enabled tools for this agent
-    const tools = getEnabledTools(agent.tools);
+    // Get enabled tools for this agent (depth=0 for user-initiated chats)
+    const tools = getEnabledTools(agent.tools, {
+      ctx,
+      clerkId: args.clerkId,
+      agentId: args.agentId,
+      depth: 0,
+    });
 
     const chatHistory = messages.slice(-20).map((m) => ({
       role: m.role === "user" ? ("user" as const) : ("assistant" as const),
@@ -121,14 +126,8 @@ function googleToolDefs(tools: ToolDefinition[]) {
   ];
 }
 
-async function executeTool(name: string, args: any): Promise<string> {
-  const tool = allTools[name];
-  if (!tool) return `Error: Unknown tool "${name}"`;
-  try {
-    return await tool.execute(args);
-  } catch (err: any) {
-    return `Error executing ${name}: ${err.message}`;
-  }
+async function executeTool(name: string, args: any, tools: ToolDefinition[]): Promise<string> {
+  return executeToolFromList(name, args, tools);
 }
 
 // ─── OpenAI Loop ───
@@ -178,7 +177,7 @@ async function runOpenAILoop(
     for (const tc of message.tool_calls) {
       const fnName = tc.function.name;
       const fnArgs = JSON.parse(tc.function.arguments || "{}");
-      const result = await executeTool(fnName, fnArgs);
+      const result = await executeTool(fnName, fnArgs, tools);
 
       toolCalls.push({ tool: fnName, args: JSON.stringify(fnArgs), result });
       msgs.push({ role: "tool", tool_call_id: tc.id, content: result });
@@ -234,7 +233,7 @@ async function runAnthropicLoop(
     // Execute tools and build tool_result blocks
     const resultBlocks: any[] = [];
     for (const block of toolUseBlocks) {
-      const result = await executeTool(block.name, block.input);
+      const result = await executeTool(block.name, block.input, tools);
       toolCalls.push({ tool: block.name, args: JSON.stringify(block.input), result });
       resultBlocks.push({
         type: "tool_result",
@@ -305,7 +304,7 @@ async function runGoogleLoop(
     const responseParts: any[] = [];
     for (const part of fnCalls) {
       const { name, args } = part.functionCall;
-      const result = await executeTool(name, args);
+      const result = await executeTool(name, args, tools);
       toolCalls.push({ tool: name, args: JSON.stringify(args), result });
       responseParts.push({
         functionResponse: { name, response: { result } },
@@ -316,3 +315,83 @@ async function runGoogleLoop(
 
   return { text: "(max tool iterations reached)", toolCalls };
 }
+
+// ─── Agent-to-Agent Chat ───
+
+export const agentToAgentChat = action({
+  args: {
+    callingAgentId: v.id("agents"),
+    targetAgentId: v.id("agents"),
+    clerkId: v.string(),
+    message: v.string(),
+    depth: v.number(),
+  },
+  handler: async (ctx, args): Promise<string> => {
+    if (args.depth > 3) {
+      return "Error: Maximum agent-to-agent depth exceeded.";
+    }
+
+    const targetAgent = await ctx.runQuery(api.agents.getAgent, { agentId: args.targetAgentId });
+    if (!targetAgent) return "Error: Target agent not found.";
+
+    const callingAgent = await ctx.runQuery(api.agents.getAgent, { agentId: args.callingAgentId });
+    if (!callingAgent) return "Error: Calling agent not found.";
+
+    if (targetAgent.userId !== callingAgent.userId) {
+      return "Error: Agents must belong to the same user.";
+    }
+
+    const user = await ctx.runQuery(api.users.getUser, { clerkId: args.clerkId });
+    if (!user) return "Error: User not found.";
+
+    const model = targetAgent.model || "gpt-4o-mini";
+    let provider: "openai" | "anthropic" | "google";
+    if (model.startsWith("claude")) provider = "anthropic";
+    else if (model.startsWith("gemini")) provider = "google";
+    else provider = "openai";
+
+    const encryptedKey = user.apiKeys?.[provider];
+    if (!encryptedKey) {
+      return `Error: No ${provider} API key configured for agent-to-agent chat.`;
+    }
+
+    const encryptionKey = process.env.ENCRYPTION_KEY;
+    if (!encryptionKey) return "Error: ENCRYPTION_KEY not set.";
+
+    const { decrypt } = await import("./crypto");
+    const apiKey = decrypt(encryptedKey, encryptionKey);
+
+    const tools = getEnabledTools(targetAgent.tools, {
+      ctx,
+      clerkId: args.clerkId,
+      agentId: args.targetAgentId,
+      depth: args.depth,
+    });
+
+    const systemPrompt = targetAgent.systemPrompt +
+      `\n\n[This message was sent by agent "${callingAgent.name}" (${callingAgent.role}). Respond helpfully to their request.]`;
+
+    const chatHistory: ChatMessage[] = [
+      { role: "user", content: args.message },
+    ];
+
+    let result: LoopResult;
+    if (provider === "openai") {
+      result = await runOpenAILoop(apiKey, model, systemPrompt, chatHistory, tools);
+    } else if (provider === "anthropic") {
+      result = await runAnthropicLoop(apiKey, model, systemPrompt, chatHistory, tools);
+    } else {
+      result = await runGoogleLoop(apiKey, model, systemPrompt, chatHistory, tools);
+    }
+
+    // Log the inter-agent exchange
+    await ctx.runMutation(api.messages.addAgentMessage, {
+      agentId: args.targetAgentId,
+      clerkId: args.clerkId,
+      content: `🤖 [Agent-to-agent] "${callingAgent.name}" asked: ${args.message.slice(0, 200)}${args.message.length > 200 ? "..." : ""}\n\nResponse: ${result.text.slice(0, 500)}${result.text.length > 500 ? "..." : ""}`,
+      toolCalls: result.toolCalls.length > 0 ? result.toolCalls : undefined,
+    });
+
+    return result.text;
+  },
+});
