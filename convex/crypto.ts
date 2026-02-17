@@ -23,7 +23,28 @@ export function encrypt(plaintext: string): string {
   return `${iv.toString("base64")}:${tag.toString("base64")}:${encrypted}`;
 }
 
-export function decrypt(blob: string): string {
+export function decrypt(blob: string, _unused?: string): string {
+  // Handle legacy plaintext keys (stored before encryption was added)
+  if (!blob.includes(":") || blob.startsWith("sk-") || blob.startsWith("sk_")) {
+    return blob;
+  }
+  // Handle legacy JSON format: {"iv":"...","authTag":"...","encrypted":"..."}
+  if (blob.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(blob);
+      const encKey = process.env.ENCRYPTION_KEY;
+      if (!encKey) throw new Error("ENCRYPTION_KEY not set");
+      const key = crypto.scryptSync(encKey, "salt", 32);
+      const decipher = crypto.createDecipheriv("aes-256-gcm", key, Buffer.from(parsed.iv, "hex"));
+      decipher.setAuthTag(Buffer.from(parsed.authTag, "hex"));
+      let decrypted = decipher.update(parsed.encrypted, "hex", "utf8");
+      decrypted += decipher.final("utf8");
+      return decrypted;
+    } catch {
+      return blob;
+    }
+  }
+  // New format: iv:tag:ciphertext (base64)
   const key = getEncryptionKey();
   const [ivB64, tagB64, ciphertext] = blob.split(":");
   const iv = Buffer.from(ivB64, "base64");
