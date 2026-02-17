@@ -30,7 +30,9 @@ export default function ChatPage() {
   const [showSidebar, setShowSidebar] = useState(false);
 
   // Show "thinking" indicator when last message is from user (agent hasn't responded yet)
-  const agentThinking = !sending && messages && messages.length > 0 && messages[messages.length - 1].role === "user";
+  const lastMsg = messages && messages.length > 0 ? messages[messages.length - 1] : null;
+  const isStreaming = lastMsg?.role === "agent" && lastMsg?.streaming === true;
+  const agentThinking = !sending && !isStreaming && lastMsg?.role === "user";
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -143,6 +145,9 @@ export default function ChatPage() {
                 }`}
               >
                 {msg.content}
+                {msg.streaming && (
+                  <span className="inline-block w-[2px] h-[1.1em] bg-zinc-300 align-middle ml-0.5 animate-pulse" />
+                )}
                 {msg.toolCalls && msg.toolCalls.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-white/10 space-y-1">
                     {msg.toolCalls.map((tc, i) => (

@@ -96,6 +96,7 @@ export default defineSchema({
       args: v.optional(v.string()),
       result: v.optional(v.string()),
     }))),
+    streaming: v.optional(v.boolean()),
   }).index("by_agent_and_user", ["agentId", "clerkId"]),
 
   // Org chart connections

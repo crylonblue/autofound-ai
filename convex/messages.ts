@@ -65,6 +65,54 @@ export const addAgentMessage = mutation({
   },
 });
 
+export const createStreamingMessage = mutation({
+  args: {
+    agentId: v.id("agents"),
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("messages", {
+      agentId: args.agentId,
+      clerkId: args.clerkId,
+      role: "agent",
+      content: "",
+      timestamp: Date.now(),
+      streaming: true,
+    });
+  },
+});
+
+export const appendToMessage = mutation({
+  args: {
+    messageId: v.id("messages"),
+    text: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const msg = await ctx.db.get(args.messageId);
+    if (!msg) throw new Error("Message not found");
+    await ctx.db.patch(args.messageId, {
+      content: msg.content + args.text,
+    });
+  },
+});
+
+export const finalizeMessage = mutation({
+  args: {
+    messageId: v.id("messages"),
+    toolCalls: v.optional(v.array(v.object({
+      tool: v.string(),
+      args: v.optional(v.string()),
+      result: v.optional(v.string()),
+    }))),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.messageId, {
+      streaming: false,
+      ...(args.toolCalls ? { toolCalls: args.toolCalls } : {}),
+    });
+  },
+});
+
 export const clearHistory = mutation({
   args: {
     agentId: v.id("agents"),
