@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { api } from "./_generated/api";
 
 export const list = query({
   args: {
@@ -32,8 +33,11 @@ export const send = mutation({
       content: args.content,
       timestamp: Date.now(),
     });
-    // TODO: trigger agent runner
-    // await ctx.scheduler.runAfter(0, internal.agentRunner.run, { messageId });
+    // Trigger agent response
+    await ctx.scheduler.runAfter(0, api.chatRunner.respondToMessage, {
+      agentId: args.agentId,
+      clerkId: args.clerkId,
+    });
     return messageId;
   },
 });

@@ -26,6 +26,9 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+
+  // Show "thinking" indicator when last message is from user (agent hasn't responded yet)
+  const agentThinking = !sending && messages && messages.length > 0 && messages[messages.length - 1].role === "user";
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -151,13 +154,18 @@ export default function ChatPage() {
             </div>
           ))}
 
-          {sending && (
+          {(sending || agentThinking) && (
             <div className="flex justify-start">
               <div className="bg-white/[0.07] rounded-2xl rounded-bl-md px-4 py-3">
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                  <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                  <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1">
+                    <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                    <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                    <span className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                  </div>
+                  {agentThinking && (
+                    <span className="text-xs text-zinc-500 ml-1">Thinking…</span>
+                  )}
                 </div>
               </div>
             </div>
