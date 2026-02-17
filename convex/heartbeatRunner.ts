@@ -35,14 +35,23 @@ export const runHeartbeat = action({
       const messages = await ctx.runQuery(api.messages.list, { agentId: args.agentId, clerkId: args.clerkId });
       const recentMessages = messages.slice(-10);
 
-      // Load memory from R2
+      // Load memory and soul from R2
       let memory = "";
+      let soul = "";
       try {
-        memory = await ctx.runAction(api.r2.readFile, {
-          clerkId: args.clerkId,
-          key: `agents/${args.agentId}/MEMORY.md`,
-        }) ?? "";
-      } catch { /* no memory yet */ }
+        const [soulContent, memoryContent] = await Promise.all([
+          ctx.runAction(api.r2.readFile, {
+            clerkId: args.clerkId,
+            key: `agents/${args.agentId}/SOUL.md`,
+          }),
+          ctx.runAction(api.r2.readFile, {
+            clerkId: args.clerkId,
+            key: `agents/${args.agentId}/MEMORY.md`,
+          }),
+        ]);
+        soul = soulContent ?? "";
+        memory = memoryContent ?? "";
+      } catch { /* R2 failure — continue with defaults */ }
 
       // Build prompt
       const taskList = pendingTasks.length > 0
@@ -53,11 +62,13 @@ export const runHeartbeat = action({
         ? recentMessages.map((m) => `[${m.role}] ${m.content}`).join("\n")
         : "No new messages.";
 
+      const baseIdentity = soul ? soul.slice(0, 2000) : agent.systemPrompt;
+
       const prompt = `You are ${agent.name}, a ${agent.role}. This is your regular 30-minute check-in.
 
 Current time: ${new Date().toISOString()}
 
-${agent.systemPrompt}
+${baseIdentity}
 
 ## Pending Tasks
 ${taskList}
@@ -66,7 +77,7 @@ ${taskList}
 ${msgList}
 
 ## Your Memory
-${memory || "No memory yet."}
+${memory ? memory.slice(0, 4000) : "No memory yet."}
 
 ---
 Check your tasks, review any messages, and do proactive work if needed.

@@ -9,6 +9,48 @@ import { getEnabledTools, executeToolFromList } from "./tools/index";
 import { getToolNamesFromSkills, getAllToolNames } from "./tools/skillPacks";
 
 const MAX_TOOL_ITERATIONS = 10;
+const MAX_SOUL_CHARS = 2000;
+const MAX_MEMORY_CHARS = 4000;
+
+async function buildEnhancedSystemPrompt(
+  ctx: any,
+  clerkId: string,
+  agentId: string,
+  fallbackPrompt: string
+): Promise<string> {
+  let soulContent: string | null = null;
+  let memoryContent: string | null = null;
+
+  try {
+    [soulContent, memoryContent] = await Promise.all([
+      ctx.runAction(api.r2.readFile, {
+        clerkId,
+        key: `agents/${agentId}/SOUL.md`,
+      }),
+      ctx.runAction(api.r2.readFile, {
+        clerkId,
+        key: `agents/${agentId}/MEMORY.md`,
+      }),
+    ]);
+  } catch {
+    // R2 failure — fall back to plain system prompt
+    return fallbackPrompt;
+  }
+
+  const soul = soulContent
+    ? soulContent.slice(0, MAX_SOUL_CHARS)
+    : fallbackPrompt;
+
+  let prompt = soul;
+
+  if (memoryContent) {
+    prompt += `\n\n## Your Memory\n${memoryContent.slice(0, MAX_MEMORY_CHARS)}`;
+  }
+
+  prompt += `\n\n## Tools Available\nYou have access to tools including file management (read_file, write_file, list_files).\nUse write_file to update your MEMORY.md when you learn important things.`;
+
+  return prompt;
+}
 
 export const respondToMessage = action({
   args: {
@@ -82,20 +124,25 @@ export const respondToMessage = action({
       content: m.content,
     }));
 
+    // Load agent memory from R2 for enriched system prompt
+    const enhancedSystemPrompt = await buildEnhancedSystemPrompt(
+      ctx, args.clerkId, args.agentId as string, agent.systemPrompt
+    );
+
     let responseText: string;
     const collectedToolCalls: { tool: string; args?: string; result?: string }[] = [];
 
     try {
       if (provider === "openai") {
-        const result = await runOpenAILoop(apiKey, model, agent.systemPrompt, chatHistory, tools);
+        const result = await runOpenAILoop(apiKey, model, enhancedSystemPrompt, chatHistory, tools);
         responseText = result.text;
         collectedToolCalls.push(...result.toolCalls);
       } else if (provider === "anthropic") {
-        const result = await runAnthropicLoop(apiKey, model, agent.systemPrompt, chatHistory, tools);
+        const result = await runAnthropicLoop(apiKey, model, enhancedSystemPrompt, chatHistory, tools);
         responseText = result.text;
         collectedToolCalls.push(...result.toolCalls);
       } else {
-        const result = await runGoogleLoop(apiKey, model, agent.systemPrompt, chatHistory, tools);
+        const result = await runGoogleLoop(apiKey, model, enhancedSystemPrompt, chatHistory, tools);
         responseText = result.text;
         collectedToolCalls.push(...result.toolCalls);
       }
@@ -399,7 +446,10 @@ export const agentToAgentChat = action({
       depth: args.depth,
     });
 
-    const systemPrompt = targetAgent.systemPrompt +
+    const basePrompt = await buildEnhancedSystemPrompt(
+      ctx, args.clerkId, args.targetAgentId as string, targetAgent.systemPrompt
+    );
+    const systemPrompt = basePrompt +
       `\n\n[This message was sent by agent "${callingAgent.name}" (${callingAgent.role}). Respond helpfully to their request.]`;
 
     const chatHistory: ChatMessage[] = [
