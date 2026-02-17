@@ -89,6 +89,9 @@ export default function AgentsPage() {
         status: "active",
       });
       setShowHire(false);
+    } catch (e) {
+      console.error("Failed to hire agent:", e);
+      alert("Failed to hire agent. Please try again.");
     } finally {
       setSaving(false);
     }
