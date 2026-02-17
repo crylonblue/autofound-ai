@@ -2,6 +2,7 @@ import { ToolDefinition } from "./types";
 import { webSearch } from "./webSearch";
 import { webFetch } from "./webFetch";
 import { createSendMessageToAgentTool } from "./sendMessageToAgent";
+import { createFileTools } from "./fileAccess";
 import { ActionCtx } from "../_generated/server";
 import { Id } from "../_generated/dataModel";
 
@@ -37,6 +38,16 @@ export function getEnabledTools(
       runtimeCtx.depth
     );
     available[agentTool.name] = agentTool;
+
+    // File access tools (R2 workspace)
+    const fileTools = createFileTools(
+      runtimeCtx.ctx,
+      runtimeCtx.clerkId,
+      runtimeCtx.agentId as string
+    );
+    for (const ft of fileTools) {
+      available[ft.name] = ft;
+    }
   }
 
   return toolNames

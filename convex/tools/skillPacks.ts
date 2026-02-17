@@ -11,6 +11,12 @@ export const SKILL_PACKS = {
     icon: "💬",
     tools: ["send_message_to_agent"],
   },
+  "file-management": {
+    name: "File Management",
+    description: "Read, write, and manage files in persistent workspace storage",
+    icon: "📁",
+    tools: ["read_file", "write_file", "list_files", "delete_file"],
+  },
 } as const;
 
 export type SkillPackKey = keyof typeof SKILL_PACKS;
