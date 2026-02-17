@@ -336,14 +336,10 @@ export default function AgentsPage() {
                     <input type="text" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="e.g. Marketing" className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-sm focus:outline-none focus:border-blue-500/50" />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-zinc-400 mb-1 block">Icon</label>
                     <input type="text" value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-sm text-center focus:outline-none focus:border-blue-500/50" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-zinc-400 mb-1 block">Color</label>
-                    <input type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} className="w-full h-[38px] bg-white/[0.03] border border-white/10 rounded-lg cursor-pointer" />
                   </div>
                   <div>
                     <label className="text-xs text-zinc-400 mb-1 block">Model</label>
@@ -419,14 +415,10 @@ export default function AgentsPage() {
                   <input type="text" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-sm focus:outline-none focus:border-blue-500/50" />
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-zinc-400 mb-1 block">Icon</label>
                   <input type="text" value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-sm text-center focus:outline-none focus:border-blue-500/50" />
-                </div>
-                <div>
-                  <label className="text-xs text-zinc-400 mb-1 block">Color</label>
-                  <input type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} className="w-full h-[38px] bg-white/[0.03] border border-white/10 rounded-lg cursor-pointer" />
                 </div>
                 <div>
                   <label className="text-xs text-zinc-400 mb-1 block">Model</label>

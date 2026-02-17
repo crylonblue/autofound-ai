@@ -9,7 +9,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard,
   Users,
-  GitBranchPlus,
   ListTodo,
   Settings,
   Zap,
@@ -20,7 +19,6 @@ import {
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/agents", label: "Agents", icon: Users },
-  { href: "/org-chart", label: "Org Chart", icon: GitBranchPlus },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

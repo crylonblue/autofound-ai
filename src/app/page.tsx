@@ -7,34 +7,6 @@ import TerminalDemo from "./components/TerminalDemo";
 
 /* ───────────────────────── components ───────────────────────── */
 
-function OrgNode({ icon, label, sub, color, mini, pulse, glow = true }: {
-  icon: string; label: string; sub?: string; color: string; mini?: boolean; pulse?: boolean; glow?: boolean;
-}) {
-  return (
-    <div className={`relative group ${mini ? 'w-16' : ''}`}>
-      {pulse && <div className="absolute -inset-1 rounded-xl opacity-20 animate-pulse" style={{ background: color }} />}
-      <div
-        className={`relative rounded-xl border text-center transition-all duration-300 hover:scale-105 ${
-          mini ? 'px-2 py-2 bg-white/[0.03]' : 'px-4 py-3 bg-white/[0.04]'
-        }`}
-        style={{
-          borderColor: color + '30',
-          boxShadow: glow ? `0 0 20px ${color}15` : 'none',
-        }}
-      >
-        <div className={mini ? 'text-lg' : 'text-2xl mb-1'}>{icon}</div>
-        <div className={`font-semibold text-white ${mini ? 'text-[10px]' : 'text-sm'}`}>{label}</div>
-        {sub && <div className="text-[10px] text-zinc-500 mt-0.5">{sub}</div>}
-        {!mini && (
-          <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
-            <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-            active
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function CTAButtons({ className = "", center = false }: { className?: string; center?: boolean }) {
   return (
@@ -60,7 +32,7 @@ const faqs = [
   { q: "What AI models are supported?", a: "OpenAI, Anthropic Claude, Google Gemini, Mistral, Llama, and 100+ more via standard APIs." },
   { q: "Can I customize agent roles?", a: "Yes, every agent template is fully customizable. Edit system prompts, tools, permissions, and communication rules." },
   { q: "Is my data private?", a: "Absolutely. With BYOK, data flows directly between you and your AI provider. We never see your prompts or outputs." },
-  { q: "Can agents communicate with each other?", a: "Yes, agents follow your org chart. They can delegate tasks, request approvals, and escalate issues." },
+  { q: "Can agents communicate with each other?", a: "Yes, agents can delegate tasks, request approvals, and escalate issues based on your team structure." },
   { q: "What happens if an agent makes a mistake?", a: "All critical actions require human approval gates. You set the rules for what needs sign-off." },
 ];
 
@@ -108,8 +80,8 @@ const steps = [
   },
   {
     n: "02",
-    title: "Build your org chart",
-    desc: "Drag-and-drop hierarchy builder. Define who reports to whom, communication channels, escalation paths, and approval gates.",
+    title: "Define your team structure",
+    desc: "Set up roles, communication channels, escalation paths, and approval gates for your AI workforce.",
   },
   {
     n: "03",
@@ -130,13 +102,13 @@ const agents = [
 ];
 
 const pricing = [
-  { name: "Starter", price: "Free", sub: "forever", agents: "3 agents", features: ["Basic org chart", "Community templates", "BYOK"] },
+  { name: "Starter", price: "Free", sub: "forever", agents: "3 agents", features: ["Team structure", "Community templates", "BYOK"] },
   { name: "Growth", price: "$29", sub: "/month", agents: "15 agents", features: ["Custom templates", "Advanced comm rules", "Priority support"], popular: true },
   { name: "Business", price: "$79", sub: "/month", agents: "Unlimited agents", features: ["API access", "Team collaboration", "Priority execution"] },
 ];
 
 const comparisons = [
-  { them: "Single chatbot", us: "Full AI org chart" },
+  { them: "Single chatbot", us: "Full AI team hierarchy" },
   { them: "You orchestrate everything", us: "Agents collaborate autonomously" },
   { them: "Flat, no structure", us: "Hierarchical delegation & escalation" },
   { them: "Locked to one provider", us: "BYOK — bring your own API keys" },
@@ -217,7 +189,7 @@ export default function Home() {
           </h1>
           <p className="mt-6 text-lg sm:text-xl text-zinc-400 max-w-2xl mx-auto animate-fade-in-up animate-delay-100">
             Build and run your company with AI agent teams. Hire roles, define
-            org charts, and let them execute real work — autonomously.
+            team structures, and let them execute real work — autonomously.
           </p>
           <div className="mt-10 animate-fade-in-up animate-delay-200">
             <CTAButtons center />
@@ -245,60 +217,6 @@ export default function Home() {
                 <p className="mt-3 text-zinc-400 leading-relaxed">{s.desc}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Org chart ─── */}
-      <section className="py-24 px-6 border-t border-white/5">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Your AI org chart
-          </h2>
-          <p className="text-zinc-400 mb-12 max-w-xl mx-auto">
-            Define hierarchy, communication channels, and escalation paths.
-            Agents know who to report to and who to delegate to.
-          </p>
-          {/* Visual Org Chart */}
-          <div className="relative max-w-3xl mx-auto">
-            {/* SVG Connection Lines — hidden on mobile */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none hidden sm:block" style={{ zIndex: 0 }}>
-              <line x1="50%" y1="52" x2="50%" y2="100" stroke="#3b82f6" strokeWidth="2" strokeOpacity="0.4" />
-              <line x1="50%" y1="152" x2="16.6%" y2="200" stroke="#10b981" strokeWidth="2" strokeOpacity="0.3" />
-              <line x1="50%" y1="152" x2="50%" y2="200" stroke="#f59e0b" strokeWidth="2" strokeOpacity="0.3" />
-              <line x1="50%" y1="152" x2="83.3%" y2="200" stroke="#a855f7" strokeWidth="2" strokeOpacity="0.3" />
-              <line x1="16.6%" y1="252" x2="8.3%" y2="300" stroke="#10b981" strokeWidth="1.5" strokeOpacity="0.2" />
-              <line x1="16.6%" y1="252" x2="25%" y2="300" stroke="#10b981" strokeWidth="1.5" strokeOpacity="0.2" />
-              <line x1="50%" y1="252" x2="50%" y2="300" stroke="#f59e0b" strokeWidth="1.5" strokeOpacity="0.2" />
-              <line x1="83.3%" y1="252" x2="75%" y2="300" stroke="#a855f7" strokeWidth="1.5" strokeOpacity="0.2" />
-              <line x1="83.3%" y1="252" x2="91.6%" y2="300" stroke="#a855f7" strokeWidth="1.5" strokeOpacity="0.2" />
-            </svg>
-
-            {/* Row 1: Founder */}
-            <div className="flex justify-center mb-4 sm:mb-6 relative z-10">
-              <OrgNode icon="👤" label="You" sub="Founder" color="#ffffff" glow={false} />
-            </div>
-
-            {/* Row 2: CEO */}
-            <div className="flex justify-center mb-4 sm:mb-6 relative z-10">
-              <OrgNode icon="👔" label="CEO Agent" sub="Strategic Oversight" color="#3b82f6" pulse />
-            </div>
-
-            {/* Row 3: C-Suite */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6 relative z-10">
-              <div className="flex justify-center"><OrgNode icon="📣" label="CMO" sub="Marketing" color="#10b981" /></div>
-              <div className="flex justify-center"><OrgNode icon="💰" label="CFO" sub="Finance" color="#f59e0b" /></div>
-              <div className="flex justify-center"><OrgNode icon="⚙️" label="CTO" sub="Engineering" color="#a855f7" /></div>
-            </div>
-
-            {/* Row 4: Workers */}
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 relative z-10">
-              <div className="flex justify-center"><OrgNode icon="✍️" label="Writer" color="#10b981" mini /></div>
-              <div className="flex justify-center"><OrgNode icon="🔍" label="SEO" color="#10b981" mini /></div>
-              <div className="flex justify-center"><OrgNode icon="📊" label="Books" color="#f59e0b" mini /></div>
-              <div className="flex justify-center"><OrgNode icon="💻" label="Dev" color="#a855f7" mini /></div>
-              <div className="flex justify-center"><OrgNode icon="🧪" label="QA" color="#a855f7" mini /></div>
-            </div>
           </div>
         </div>
       </section>
