@@ -55,7 +55,7 @@ export const startAgentRun = action({
     // Start Fly.io machine
     const flyToken = process.env.FLY_API_TOKEN;
     const flyApp = process.env.FLY_APP_NAME || "autofound-agent-runner";
-    const convexUrl = process.env.CONVEX_URL || "https://calm-robin-588.convex.cloud";
+    const convexUrl = process.env.CONVEX_URL || "https://calm-robin-588.eu-west-1.convex.cloud";
     const encryptionKey = process.env.ENCRYPTION_KEY || "";
 
     if (!flyToken) {
@@ -74,7 +74,7 @@ export const startAgentRun = action({
     try {
       const machineConfig = {
         config: {
-          image: `registry.fly.io/${flyApp}:latest`,
+          image: process.env.FLY_IMAGE || `registry.fly.io/${flyApp}:deployment-01KHPQEHNB7CWQNY5QZW0AQT2X`,
           env: {
             FLY_TASK_ID: args.taskId,
             FLY_RUN_ID: runId,
