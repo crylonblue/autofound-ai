@@ -43,6 +43,7 @@ export const createAgentByClerk = mutation({
     color: v.string(),
     systemPrompt: v.string(),
     model: v.optional(v.string()),
+    tools: v.optional(v.array(v.string())),
     status: v.union(v.literal("active"), v.literal("paused"), v.literal("draft")),
   },
   handler: async (ctx, args) => {

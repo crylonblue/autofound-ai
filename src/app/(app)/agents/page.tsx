@@ -7,6 +7,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import { SKILL_PACKS, ALL_SKILL_KEYS, DEFAULT_SKILLS, type SkillPackKey } from "../../../lib/skillPacks";
 
 function useClerkUser() {
   return useUser();
@@ -39,9 +40,10 @@ type AgentForm = {
   color: string;
   systemPrompt: string;
   model: string;
+  skills: SkillPackKey[];
 };
 
-const emptyForm: AgentForm = { name: "", role: "", icon: "🤖", color: "#3b82f6", systemPrompt: "", model: "gpt-4o-mini" };
+const emptyForm: AgentForm = { name: "", role: "", icon: "🤖", color: "#3b82f6", systemPrompt: "", model: "gpt-4o-mini", skills: [...DEFAULT_SKILLS] };
 
 export default function AgentsPage() {
   const { user: clerkUser, isLoaded } = useClerkUser();
@@ -70,6 +72,7 @@ export default function AgentsPage() {
       color: agent.color,
       systemPrompt: agent.systemPrompt,
       model: agent.model || "gpt-4o-mini",
+      skills: (agent.tools as SkillPackKey[] | undefined) ?? [...DEFAULT_SKILLS],
     });
     setShowEdit(true);
   };
@@ -86,6 +89,7 @@ export default function AgentsPage() {
         color: t.color,
         systemPrompt: t.systemPrompt,
         model: "gpt-4o-mini",
+        tools: [...DEFAULT_SKILLS],
         status: "active",
       });
       setShowHire(false);
@@ -109,6 +113,7 @@ export default function AgentsPage() {
         color: form.color,
         systemPrompt: form.systemPrompt,
         model: form.model,
+        tools: form.skills,
         status: "active",
       });
       setForm(emptyForm);
@@ -130,6 +135,7 @@ export default function AgentsPage() {
         color: form.color,
         systemPrompt: form.systemPrompt,
         model: form.model,
+        tools: form.skills,
       });
       setShowEdit(false);
       setEditingId(null);
@@ -350,6 +356,41 @@ export default function AgentsPage() {
                   <label className="text-xs text-zinc-400 mb-1 block">System Prompt</label>
                   <textarea value={form.systemPrompt} onChange={(e) => setForm({ ...form, systemPrompt: e.target.value })} placeholder="Instructions for this agent..." rows={3} className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-sm resize-none focus:outline-none focus:border-blue-500/50" />
                 </div>
+                {/* Skills */}
+                <div>
+                  <label className="text-xs text-zinc-400 mb-2 block">Skills</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {ALL_SKILL_KEYS.map((key) => {
+                      const pack = SKILL_PACKS[key];
+                      const active = form.skills.includes(key);
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() =>
+                            setForm({
+                              ...form,
+                              skills: active
+                                ? form.skills.filter((s) => s !== key)
+                                : [...form.skills, key],
+                            })
+                          }
+                          className={`flex items-center gap-2.5 p-3 rounded-lg border text-left transition-all ${
+                            active
+                              ? "border-blue-500/50 bg-blue-500/10"
+                              : "border-white/10 bg-white/[0.02] hover:border-white/20"
+                          }`}
+                        >
+                          <span className="text-lg">{pack.icon}</span>
+                          <div className="min-w-0">
+                            <div className="text-xs font-medium">{pack.name}</div>
+                            <div className="text-[10px] text-zinc-500 truncate">{pack.description}</div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
                 <button onClick={hireCustom} disabled={!form.name || !form.role || saving} className="w-full py-2.5 bg-blue-600 rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />} Create Custom Agent
                 </button>
@@ -397,6 +438,41 @@ export default function AgentsPage() {
               <div>
                 <label className="text-xs text-zinc-400 mb-1 block">System Prompt</label>
                 <textarea value={form.systemPrompt} onChange={(e) => setForm({ ...form, systemPrompt: e.target.value })} rows={4} className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-sm resize-none focus:outline-none focus:border-blue-500/50" />
+              </div>
+              {/* Skills */}
+              <div>
+                <label className="text-xs text-zinc-400 mb-2 block">Skills</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {ALL_SKILL_KEYS.map((key) => {
+                    const pack = SKILL_PACKS[key];
+                    const active = form.skills.includes(key);
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            skills: active
+                              ? form.skills.filter((s) => s !== key)
+                              : [...form.skills, key],
+                          })
+                        }
+                        className={`flex items-center gap-2.5 p-3 rounded-lg border text-left transition-all ${
+                          active
+                            ? "border-blue-500/50 bg-blue-500/10"
+                            : "border-white/10 bg-white/[0.02] hover:border-white/20"
+                        }`}
+                      >
+                        <span className="text-lg">{pack.icon}</span>
+                        <div className="min-w-0">
+                          <div className="text-xs font-medium">{pack.name}</div>
+                          <div className="text-[10px] text-zinc-500 truncate">{pack.description}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <button onClick={saveEdit} disabled={saving} className="w-full py-2.5 bg-blue-600 rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />} Save Changes

@@ -6,6 +6,7 @@ import { api } from "./_generated/api";
 import { decrypt } from "./crypto";
 import { ToolDefinition } from "./tools/types";
 import { getEnabledTools, executeToolFromList } from "./tools/index";
+import { getToolNamesFromSkills, getAllToolNames } from "./tools/skillPacks";
 
 const MAX_TOOL_ITERATIONS = 10;
 
@@ -46,8 +47,13 @@ export const respondToMessage = action({
     if (!encryptionKey) throw new Error("ENCRYPTION_KEY not set");
     const apiKey = decrypt(encryptedKey, encryptionKey);
 
+    // Resolve skill pack keys → tool names (backward compat: no skills = all tools)
+    const resolvedToolNames = agent.tools && agent.tools.length > 0
+      ? getToolNamesFromSkills(agent.tools)
+      : getAllToolNames();
+
     // Get enabled tools for this agent (depth=0 for user-initiated chats)
-    const tools = getEnabledTools(agent.tools, {
+    const tools = getEnabledTools(resolvedToolNames, {
       ctx,
       clerkId: args.clerkId,
       agentId: args.agentId,
@@ -361,7 +367,11 @@ export const agentToAgentChat = action({
     const { decrypt } = await import("./crypto");
     const apiKey = decrypt(encryptedKey, encryptionKey);
 
-    const tools = getEnabledTools(targetAgent.tools, {
+    const resolvedToolNames = targetAgent.tools && targetAgent.tools.length > 0
+      ? getToolNamesFromSkills(targetAgent.tools)
+      : getAllToolNames();
+
+    const tools = getEnabledTools(resolvedToolNames, {
       ctx,
       clerkId: args.clerkId,
       agentId: args.targetAgentId,

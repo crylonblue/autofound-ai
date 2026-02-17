@@ -24,6 +24,7 @@ import type * as r2 from "../r2.js";
 import type * as tasks from "../tasks.js";
 import type * as tools_index from "../tools/index.js";
 import type * as tools_sendMessageToAgent from "../tools/sendMessageToAgent.js";
+import type * as tools_skillPacks from "../tools/skillPacks.js";
 import type * as tools_types from "../tools/types.js";
 import type * as tools_webFetch from "../tools/webFetch.js";
 import type * as tools_webSearch from "../tools/webSearch.js";
@@ -52,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   tasks: typeof tasks;
   "tools/index": typeof tools_index;
   "tools/sendMessageToAgent": typeof tools_sendMessageToAgent;
+  "tools/skillPacks": typeof tools_skillPacks;
   "tools/types": typeof tools_types;
   "tools/webFetch": typeof tools_webFetch;
   "tools/webSearch": typeof tools_webSearch;
