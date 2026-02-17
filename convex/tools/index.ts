@@ -3,6 +3,7 @@ import { webSearch } from "./webSearch";
 import { webFetch } from "./webFetch";
 import { createSendMessageToAgentTool } from "./sendMessageToAgent";
 import { createFileTools } from "./fileAccess";
+import { codeExecute } from "./codeExecute";
 import { ActionCtx } from "../_generated/server";
 import { Id } from "../_generated/dataModel";
 
@@ -10,6 +11,7 @@ import { Id } from "../_generated/dataModel";
 export const allTools: Record<string, ToolDefinition> = {
   web_search: webSearch,
   web_fetch: webFetch,
+  code_execute: codeExecute,
 };
 
 /**

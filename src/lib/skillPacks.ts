@@ -14,6 +14,11 @@ export const SKILL_PACKS = {
     description: "Read, write, and manage files in persistent workspace storage",
     icon: "📁",
   },
+  "code-execution": {
+    name: "Code Execution",
+    description: "Execute JavaScript code for calculations and data processing",
+    icon: "🖥️",
+  },
 } as const;
 
 export type SkillPackKey = keyof typeof SKILL_PACKS;

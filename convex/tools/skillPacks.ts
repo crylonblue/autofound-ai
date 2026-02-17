@@ -17,6 +17,12 @@ export const SKILL_PACKS = {
     icon: "📁",
     tools: ["read_file", "write_file", "list_files", "delete_file"],
   },
+  "code-execution": {
+    name: "Code Execution",
+    description: "Execute JavaScript code for calculations and data processing",
+    icon: "🖥️",
+    tools: ["code_execute"],
+  },
 } as const;
 
 export type SkillPackKey = keyof typeof SKILL_PACKS;
