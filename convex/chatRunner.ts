@@ -27,18 +27,37 @@ export const respondToMessage = action({
       clerkId: args.clerkId,
     });
 
-    const model = agent.model || "gpt-4o-mini";
+    // Determine provider from agent model, with fallback to any available key
+    let model = agent.model || "gpt-4o-mini";
     let provider: "openai" | "anthropic" | "google";
     if (model.startsWith("claude")) provider = "anthropic";
     else if (model.startsWith("gemini")) provider = "google";
     else provider = "openai";
 
-    const encryptedKey = user.apiKeys?.[provider];
+    let encryptedKey = user.apiKeys?.[provider];
+
+    // If preferred provider key is missing, try to fall back to any available key
+    if (!encryptedKey) {
+      const fallbacks: Array<{ p: "openai" | "anthropic" | "google"; m: string }> = [
+        { p: "anthropic", m: "claude-sonnet-4-20250514" },
+        { p: "openai", m: "gpt-4o-mini" },
+        { p: "google", m: "gemini-1.5-flash" },
+      ];
+      for (const fb of fallbacks) {
+        if (fb.p !== provider && user.apiKeys?.[fb.p]) {
+          provider = fb.p;
+          model = fb.m;
+          encryptedKey = user.apiKeys[fb.p];
+          break;
+        }
+      }
+    }
+
     if (!encryptedKey) {
       await ctx.runMutation(api.messages.addAgentMessage, {
         agentId: args.agentId,
         clerkId: args.clerkId,
-        content: `⚠️ No ${provider} API key configured. Go to Settings to add your key.`,
+        content: `⚠️ No API key configured. Go to Settings to add your OpenAI, Anthropic, or Google key.`,
       });
       return;
     }
