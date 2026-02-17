@@ -2,44 +2,36 @@
 
 import { v } from "convex/values";
 import { action } from "./_generated/server";
-import { api, internal } from "./_generated/api";
+import { api } from "./_generated/api";
 import { decrypt } from "./crypto";
+import { ToolDefinition } from "./tools/types";
+import { getEnabledTools, allTools } from "./tools/index";
 
-/**
- * Chat runner: when a user sends a message, this action:
- * 1. Loads conversation history
- * 2. Gets agent config + user's API key
- * 3. Calls the LLM
- * 4. Saves the agent response
- */
+const MAX_TOOL_ITERATIONS = 10;
+
 export const respondToMessage = action({
   args: {
     agentId: v.id("agents"),
     clerkId: v.string(),
   },
   handler: async (ctx, args) => {
-    // Get agent
     const agent = await ctx.runQuery(api.agents.getAgent, { agentId: args.agentId });
     if (!agent) throw new Error("Agent not found");
 
-    // Get user for API keys
     const user = await ctx.runQuery(api.users.getUser, { clerkId: args.clerkId });
     if (!user) throw new Error("User not found");
 
-    // Get conversation history
     const messages = await ctx.runQuery(api.messages.list, {
       agentId: args.agentId,
       clerkId: args.clerkId,
     });
 
-    // Determine provider from agent model
     const model = agent.model || "gpt-4o-mini";
     let provider: "openai" | "anthropic" | "google";
     if (model.startsWith("claude")) provider = "anthropic";
     else if (model.startsWith("gemini")) provider = "google";
     else provider = "openai";
 
-    // Get decrypted key
     const encryptedKey = user.apiKeys?.[provider];
     if (!encryptedKey) {
       await ctx.runMutation(api.messages.addAgentMessage, {
@@ -54,118 +46,273 @@ export const respondToMessage = action({
     if (!encryptionKey) throw new Error("ENCRYPTION_KEY not set");
     const apiKey = decrypt(encryptedKey, encryptionKey);
 
-    // Build message history for the LLM
+    // Get enabled tools for this agent
+    const tools = getEnabledTools(agent.tools);
+
     const chatHistory = messages.slice(-20).map((m) => ({
       role: m.role === "user" ? ("user" as const) : ("assistant" as const),
       content: m.content,
     }));
 
     let responseText: string;
+    const collectedToolCalls: { tool: string; args?: string; result?: string }[] = [];
 
     try {
-      if (provider === "anthropic") {
-        responseText = await callAnthropic(apiKey, model, agent.systemPrompt, chatHistory);
-      } else if (provider === "google") {
-        responseText = await callGoogle(apiKey, model, agent.systemPrompt, chatHistory);
+      if (provider === "openai") {
+        const result = await runOpenAILoop(apiKey, model, agent.systemPrompt, chatHistory, tools);
+        responseText = result.text;
+        collectedToolCalls.push(...result.toolCalls);
+      } else if (provider === "anthropic") {
+        const result = await runAnthropicLoop(apiKey, model, agent.systemPrompt, chatHistory, tools);
+        responseText = result.text;
+        collectedToolCalls.push(...result.toolCalls);
       } else {
-        responseText = await callOpenAI(apiKey, model, agent.systemPrompt, chatHistory);
+        const result = await runGoogleLoop(apiKey, model, agent.systemPrompt, chatHistory, tools);
+        responseText = result.text;
+        collectedToolCalls.push(...result.toolCalls);
       }
     } catch (err: any) {
       responseText = `❌ Error: ${err.message || "Failed to generate response"}`;
     }
 
-    // Save agent response
     await ctx.runMutation(api.messages.addAgentMessage, {
       agentId: args.agentId,
       clerkId: args.clerkId,
       content: responseText,
+      toolCalls: collectedToolCalls.length > 0 ? collectedToolCalls : undefined,
     });
   },
 });
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
+type ToolCallRecord = { tool: string; args?: string; result?: string };
+type LoopResult = { text: string; toolCalls: ToolCallRecord[] };
 
-async function callOpenAI(
-  apiKey: string,
-  model: string,
-  systemPrompt: string,
-  messages: ChatMessage[]
-): Promise<string> {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+// ─── Tool format helpers ───
+
+function openAIToolDefs(tools: ToolDefinition[]) {
+  return tools.map((t) => ({
+    type: "function" as const,
+    function: {
+      name: t.name,
+      description: t.description,
+      parameters: t.parameters,
     },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...messages,
-      ],
-      max_tokens: 1024,
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`OpenAI ${res.status}: ${err.slice(0, 200)}`);
-  }
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || "(no response)";
+  }));
 }
 
-async function callAnthropic(
-  apiKey: string,
-  model: string,
-  systemPrompt: string,
-  messages: ChatMessage[]
-): Promise<string> {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model,
-      system: systemPrompt,
-      messages,
-      max_tokens: 1024,
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Anthropic ${res.status}: ${err.slice(0, 200)}`);
-  }
-  const data = await res.json();
-  return data.content?.[0]?.text || "(no response)";
+function anthropicToolDefs(tools: ToolDefinition[]) {
+  return tools.map((t) => ({
+    name: t.name,
+    description: t.description,
+    input_schema: t.parameters,
+  }));
 }
 
-async function callGoogle(
+function googleToolDefs(tools: ToolDefinition[]) {
+  return [
+    {
+      functionDeclarations: tools.map((t) => ({
+        name: t.name,
+        description: t.description,
+        parameters: t.parameters,
+      })),
+    },
+  ];
+}
+
+async function executeTool(name: string, args: any): Promise<string> {
+  const tool = allTools[name];
+  if (!tool) return `Error: Unknown tool "${name}"`;
+  try {
+    return await tool.execute(args);
+  } catch (err: any) {
+    return `Error executing ${name}: ${err.message}`;
+  }
+}
+
+// ─── OpenAI Loop ───
+
+async function runOpenAILoop(
   apiKey: string,
   model: string,
   systemPrompt: string,
-  messages: ChatMessage[]
-): Promise<string> {
+  history: ChatMessage[],
+  tools: ToolDefinition[]
+): Promise<LoopResult> {
+  const msgs: any[] = [{ role: "system", content: systemPrompt }, ...history];
+  const toolCalls: ToolCallRecord[] = [];
+  const toolsDef = tools.length > 0 ? openAIToolDefs(tools) : undefined;
+
+  for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+    const body: any = { model, messages: msgs, max_tokens: 1024 };
+    if (toolsDef) body.tools = toolsDef;
+
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`OpenAI ${res.status}: ${err.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    const choice = data.choices?.[0];
+    const message = choice?.message;
+
+    if (!message) throw new Error("No response from OpenAI");
+
+    // If no tool calls, return text
+    if (!message.tool_calls || message.tool_calls.length === 0) {
+      return { text: message.content || "(no response)", toolCalls };
+    }
+
+    // Add assistant message with tool calls
+    msgs.push(message);
+
+    // Execute each tool call
+    for (const tc of message.tool_calls) {
+      const fnName = tc.function.name;
+      const fnArgs = JSON.parse(tc.function.arguments || "{}");
+      const result = await executeTool(fnName, fnArgs);
+
+      toolCalls.push({ tool: fnName, args: JSON.stringify(fnArgs), result });
+      msgs.push({ role: "tool", tool_call_id: tc.id, content: result });
+    }
+  }
+
+  return { text: "(max tool iterations reached)", toolCalls };
+}
+
+// ─── Anthropic Loop ───
+
+async function runAnthropicLoop(
+  apiKey: string,
+  model: string,
+  systemPrompt: string,
+  history: ChatMessage[],
+  tools: ToolDefinition[]
+): Promise<LoopResult> {
+  const msgs: any[] = history.map((m) => ({ role: m.role, content: m.content }));
+  const toolCalls: ToolCallRecord[] = [];
+  const toolsDef = tools.length > 0 ? anthropicToolDefs(tools) : undefined;
+
+  for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+    const body: any = { model, system: systemPrompt, messages: msgs, max_tokens: 1024 };
+    if (toolsDef) body.tools = toolsDef;
+
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Anthropic ${res.status}: ${err.slice(0, 200)}`);
+    }
+    const data = await res.json();
+
+    // Check for tool_use blocks
+    const toolUseBlocks = data.content?.filter((b: any) => b.type === "tool_use") || [];
+    const textBlocks = data.content?.filter((b: any) => b.type === "text") || [];
+
+    if (toolUseBlocks.length === 0) {
+      return { text: textBlocks[0]?.text || "(no response)", toolCalls };
+    }
+
+    // Add assistant message
+    msgs.push({ role: "assistant", content: data.content });
+
+    // Execute tools and build tool_result blocks
+    const resultBlocks: any[] = [];
+    for (const block of toolUseBlocks) {
+      const result = await executeTool(block.name, block.input);
+      toolCalls.push({ tool: block.name, args: JSON.stringify(block.input), result });
+      resultBlocks.push({
+        type: "tool_result",
+        tool_use_id: block.id,
+        content: result,
+      });
+    }
+    msgs.push({ role: "user", content: resultBlocks });
+
+    // If stop_reason is end_turn (not tool_use), we're done
+    if (data.stop_reason === "end_turn") {
+      return { text: textBlocks[0]?.text || "(no response)", toolCalls };
+    }
+  }
+
+  return { text: "(max tool iterations reached)", toolCalls };
+}
+
+// ─── Google Loop ───
+
+async function runGoogleLoop(
+  apiKey: string,
+  model: string,
+  systemPrompt: string,
+  history: ChatMessage[],
+  tools: ToolDefinition[]
+): Promise<LoopResult> {
   const geminiModel = model || "gemini-1.5-flash";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`;
-  const contents = messages.map((m) => ({
+
+  const contents: any[] = history.map((m) => ({
     role: m.role === "assistant" ? "model" : "user",
     parts: [{ text: m.content }],
   }));
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  const toolCalls: ToolCallRecord[] = [];
+  const toolsDef = tools.length > 0 ? googleToolDefs(tools) : undefined;
+
+  for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+    const body: any = {
       systemInstruction: { parts: [{ text: systemPrompt }] },
       contents,
-    }),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Google ${res.status}: ${err.slice(0, 200)}`);
+    };
+    if (toolsDef) body.tools = toolsDef;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Google ${res.status}: ${err.slice(0, 200)}`);
+    }
+    const data = await res.json();
+    const parts = data.candidates?.[0]?.content?.parts || [];
+
+    const fnCalls = parts.filter((p: any) => p.functionCall);
+    const textParts = parts.filter((p: any) => p.text);
+
+    if (fnCalls.length === 0) {
+      return { text: textParts[0]?.text || "(no response)", toolCalls };
+    }
+
+    // Add model response
+    contents.push({ role: "model", parts });
+
+    // Execute and respond
+    const responseParts: any[] = [];
+    for (const part of fnCalls) {
+      const { name, args } = part.functionCall;
+      const result = await executeTool(name, args);
+      toolCalls.push({ tool: name, args: JSON.stringify(args), result });
+      responseParts.push({
+        functionResponse: { name, response: { result } },
+      });
+    }
+    contents.push({ role: "user", parts: responseParts });
   }
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "(no response)";
+
+  return { text: "(max tool iterations reached)", toolCalls };
 }
