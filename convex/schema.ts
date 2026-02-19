@@ -47,11 +47,14 @@ export default defineSchema({
       v.literal("error")
     )),
     telegramChatId: v.optional(v.string()),
+    // Per-agent Telegram bot integration
+    telegramBotToken: v.optional(v.string()),    // encrypted
+    telegramBotUsername: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_user", ["userId"])
     .index("by_telegram_chat_id", ["telegramChatId"]),
 
-  // Telegram link codes for connecting agents to Telegram chats
+  // DEPRECATED — kept for migration compatibility, no longer used
   telegramLinks: defineTable({
     agentId: v.id("agents"),
     clerkUserId: v.string(),

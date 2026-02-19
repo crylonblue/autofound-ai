@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Search, Play, Pause, Trash2, X, Edit2, Loader2, MessageSquare, Heart, Send } from "lucide-react";
+import { Plus, Search, Play, Pause, Trash2, X, Edit2, Loader2, MessageSquare, Heart, Send, Check } from "lucide-react";
 import Link from "next/link";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../convex/_generated/dataModel";
@@ -62,8 +62,11 @@ export default function AgentsPage() {
   const [form, setForm] = useState<AgentForm>(emptyForm);
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
-  const [telegramCode, setTelegramCode] = useState<{ agentId: string; code: string } | null>(null);
-  const generateLinkCode = useMutation(api.telegram.generateLinkCode);
+  const [telegramModal, setTelegramModal] = useState<{ agentId: Id<"agents">; botUsername?: string } | null>(null);
+  const [botTokenInput, setBotTokenInput] = useState("");
+  const [telegramLoading, setTelegramLoading] = useState(false);
+  const registerWebhook = useAction(api.telegramActions.registerWebhook);
+  const unregisterWebhook = useAction(api.telegramActions.unregisterWebhook);
 
   const openEdit = (agent: NonNullable<typeof agents>[number]) => {
     setEditingId(agent._id);
@@ -289,17 +292,16 @@ export default function AgentsPage() {
                 <MessageSquare className="w-3.5 h-3.5" />
                 Chat
               </Link>
-              {agent.telegramChatId ? (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded-lg text-[10px]">
-                  <Send className="w-3 h-3" /> Telegram ✓
-                </span>
+              {agent.telegramBotUsername ? (
+                <button
+                  onClick={() => setTelegramModal({ agentId: agent._id, botUsername: agent.telegramBotUsername })}
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded-lg text-[10px] hover:bg-emerald-500/20 transition-colors"
+                >
+                  <Send className="w-3 h-3" /> @{agent.telegramBotUsername} ✓
+                </button>
               ) : (
                 <button
-                  onClick={async () => {
-                    if (!clerkId) return;
-                    const code = await generateLinkCode({ agentId: agent._id, clerkId });
-                    setTelegramCode({ agentId: agent._id as string, code });
-                  }}
+                  onClick={() => { setBotTokenInput(""); setTelegramModal({ agentId: agent._id }); }}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600/20 text-cyan-400 rounded-lg text-xs font-medium hover:bg-cyan-600/30 transition-colors"
                 >
                   <Send className="w-3.5 h-3.5" />
@@ -417,27 +419,79 @@ export default function AgentsPage() {
         </div>
       )}
 
-      {/* Telegram Link Code Modal */}
-      {telegramCode && (
+      {/* Telegram Bot Token Modal */}
+      {telegramModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#111] border border-white/10 rounded-2xl w-full max-w-sm p-6 text-center">
-            <div className="text-4xl mb-4">📱</div>
-            <h2 className="text-lg font-bold mb-2">Connect Telegram</h2>
-            <p className="text-sm text-zinc-400 mb-4">
-              Send this command to your Telegram bot:
-            </p>
-            <div className="bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 mb-4 font-mono text-lg tracking-wider select-all">
-              /link {telegramCode.code}
+          <div className="bg-[#111] border border-white/10 rounded-2xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">Telegram Integration</h2>
+              <button onClick={() => setTelegramModal(null)} className="p-1 hover:bg-white/10 rounded"><X className="w-5 h-5" /></button>
             </div>
-            <p className="text-xs text-zinc-500 mb-4">
-              Open Telegram, find your bot, and send the command above to link this agent.
-            </p>
-            <button
-              onClick={() => setTelegramCode(null)}
-              className="px-4 py-2 bg-white/10 rounded-lg text-sm hover:bg-white/20 transition-colors"
-            >
-              Done
-            </button>
+            {telegramModal.botUsername ? (
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-2 mb-4 text-emerald-400">
+                  <Check className="w-5 h-5" />
+                  <span className="font-medium">Connected as @{telegramModal.botUsername}</span>
+                </div>
+                <p className="text-xs text-zinc-500 mb-4">
+                  Users can message this agent via Telegram by chatting with @{telegramModal.botUsername}.
+                </p>
+                <button
+                  onClick={async () => {
+                    setTelegramLoading(true);
+                    try {
+                      await unregisterWebhook({ agentId: telegramModal.agentId });
+                      setTelegramModal(null);
+                    } catch (e: any) {
+                      alert("Failed to disconnect: " + e.message);
+                    } finally {
+                      setTelegramLoading(false);
+                    }
+                  }}
+                  disabled={telegramLoading}
+                  className="px-4 py-2 bg-red-600/20 text-red-400 rounded-lg text-sm hover:bg-red-600/30 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 w-full"
+                >
+                  {telegramLoading && <Loader2 className="w-4 h-4 animate-spin" />} Disconnect
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="text-xs text-zinc-400 space-y-2 mb-4">
+                  <p>To connect this agent to Telegram:</p>
+                  <ol className="list-decimal list-inside space-y-1">
+                    <li>Open <a href="https://t.me/BotFather" target="_blank" className="text-cyan-400 hover:underline">@BotFather</a> on Telegram</li>
+                    <li>Send <code className="bg-white/10 px-1 rounded">/newbot</code> and follow the prompts</li>
+                    <li>Copy the bot token and paste it below</li>
+                  </ol>
+                </div>
+                <input
+                  type="text"
+                  value={botTokenInput}
+                  onChange={(e) => setBotTokenInput(e.target.value)}
+                  placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v..."
+                  className="w-full px-3 py-2 bg-white/[0.03] border border-white/10 rounded-lg text-sm font-mono mb-3 focus:outline-none focus:border-blue-500/50"
+                />
+                <button
+                  onClick={async () => {
+                    if (!botTokenInput.trim()) return;
+                    setTelegramLoading(true);
+                    try {
+                      const result = await registerWebhook({ agentId: telegramModal.agentId, botToken: botTokenInput.trim() });
+                      setTelegramModal({ agentId: telegramModal.agentId, botUsername: result.botUsername });
+                      setBotTokenInput("");
+                    } catch (e: any) {
+                      alert("Failed to connect: " + e.message);
+                    } finally {
+                      setTelegramLoading(false);
+                    }
+                  }}
+                  disabled={telegramLoading || !botTokenInput.trim()}
+                  className="w-full py-2.5 bg-blue-600 rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {telegramLoading && <Loader2 className="w-4 h-4 animate-spin" />} Connect
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
