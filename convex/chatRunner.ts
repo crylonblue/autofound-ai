@@ -139,21 +139,24 @@ export const respondToMessage = action({
 
     let responseText: string;
     const collectedToolCalls: { tool: string; args?: string; result?: string }[] = [];
+    let tokenUsage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
 
     try {
       if (provider === "openai") {
         const result = await runOpenAIStreamingLoop(apiKey, model, enhancedSystemPrompt, chatHistory, tools, streamCallback);
         responseText = result.text;
         collectedToolCalls.push(...result.toolCalls);
+        tokenUsage = result.usage;
       } else if (provider === "anthropic") {
         const result = await runAnthropicStreamingLoop(apiKey, model, enhancedSystemPrompt, chatHistory, tools, streamCallback);
         responseText = result.text;
         collectedToolCalls.push(...result.toolCalls);
+        tokenUsage = result.usage;
       } else {
         const result = await runGoogleLoop(apiKey, model, enhancedSystemPrompt, chatHistory, tools);
         responseText = result.text;
         collectedToolCalls.push(...result.toolCalls);
-        // For Google (non-streaming), update the message content directly
+        tokenUsage = result.usage;
         await ctx.runMutation(api.messages.appendToMessage, {
           messageId: streamingMessageId,
           text: responseText,
@@ -173,13 +176,18 @@ export const respondToMessage = action({
     await ctx.runMutation(api.messages.finalizeMessage, {
       messageId: streamingMessageId,
       toolCalls: collectedToolCalls.length > 0 ? collectedToolCalls : undefined,
+      inputTokens: tokenUsage.inputTokens || undefined,
+      outputTokens: tokenUsage.outputTokens || undefined,
+      model,
+      provider,
     });
   },
 });
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 type ToolCallRecord = { tool: string; args?: string; result?: string };
-type LoopResult = { text: string; toolCalls: ToolCallRecord[] };
+type TokenUsage = { inputTokens: number; outputTokens: number };
+type LoopResult = { text: string; toolCalls: ToolCallRecord[]; usage: TokenUsage };
 
 // ─── Tool format helpers ───
 
@@ -266,6 +274,8 @@ async function runAnthropicStreamingLoop(
   const msgs: any[] = history.map((m) => ({ role: m.role, content: m.content }));
   const toolCalls: ToolCallRecord[] = [];
   const toolsDef = tools.length > 0 ? anthropicToolDefs(tools) : undefined;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
 
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
     const body: any = { model, system: systemPrompt, messages: msgs, max_tokens: 1024, stream: true };
@@ -314,6 +324,11 @@ async function runAnthropicStreamingLoop(
         try { event = JSON.parse(data); } catch { continue; }
 
         switch (event.type) {
+          case "message_start":
+            if (event.message?.usage) {
+              totalInputTokens += event.message.usage.input_tokens || 0;
+            }
+            break;
           case "content_block_start":
             if (event.content_block?.type === "tool_use") {
               currentToolUse = { id: event.content_block.id, name: event.content_block.name, inputJson: "" };
@@ -335,6 +350,7 @@ async function runAnthropicStreamingLoop(
             break;
           case "message_delta":
             if (event.delta?.stop_reason) stopReason = event.delta.stop_reason;
+            if (event.usage?.output_tokens) totalOutputTokens += event.usage.output_tokens;
             break;
         }
       }
@@ -342,7 +358,7 @@ async function runAnthropicStreamingLoop(
 
     // If no tool calls, we're done
     if (toolUseBlocks.length === 0) {
-      return { text: fullText || "(no response)", toolCalls };
+      return { text: fullText || "(no response)", toolCalls, usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens } };
     }
 
     // Build assistant content blocks for conversation history
@@ -370,11 +386,11 @@ async function runAnthropicStreamingLoop(
     await stream.flush();
 
     if (stopReason === "end_turn") {
-      return { text: fullText || "(no response)", toolCalls };
+      return { text: fullText || "(no response)", toolCalls, usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens } };
     }
   }
 
-  return { text: "(max tool iterations reached)", toolCalls };
+  return { text: "(max tool iterations reached)", toolCalls, usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens } };
 }
 
 // ─── OpenAI Streaming Loop ───
@@ -390,9 +406,11 @@ async function runOpenAIStreamingLoop(
   const msgs: any[] = [{ role: "system", content: systemPrompt }, ...history];
   const toolCalls: ToolCallRecord[] = [];
   const toolsDef = tools.length > 0 ? openAIToolDefs(tools) : undefined;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
 
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
-    const body: any = { model, messages: msgs, max_tokens: 1024, stream: true };
+    const body: any = { model, messages: msgs, max_tokens: 1024, stream: true, stream_options: { include_usage: true } };
     if (toolsDef) body.tools = toolsDef;
 
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -431,6 +449,12 @@ async function runOpenAIStreamingLoop(
         let event: any;
         try { event = JSON.parse(data); } catch { continue; }
 
+        // Extract usage from final chunk
+        if (event.usage) {
+          totalInputTokens += event.usage.prompt_tokens || 0;
+          totalOutputTokens += event.usage.completion_tokens || 0;
+        }
+
         const delta = event.choices?.[0]?.delta;
         if (!delta) continue;
 
@@ -456,7 +480,7 @@ async function runOpenAIStreamingLoop(
 
     // If no tool calls, return
     if (pendingToolCalls.size === 0) {
-      return { text: fullText || "(no response)", toolCalls };
+      return { text: fullText || "(no response)", toolCalls, usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens } };
     }
 
     // Build assistant message with tool calls for history
@@ -477,7 +501,7 @@ async function runOpenAIStreamingLoop(
     await stream.flush();
   }
 
-  return { text: "(max tool iterations reached)", toolCalls };
+  return { text: "(max tool iterations reached)", toolCalls, usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens } };
 }
 
 // ─── OpenAI Loop (non-streaming, kept for agent-to-agent) ───
@@ -492,6 +516,8 @@ async function runOpenAILoop(
   const msgs: any[] = [{ role: "system", content: systemPrompt }, ...history];
   const toolCalls: ToolCallRecord[] = [];
   const toolsDef = tools.length > 0 ? openAIToolDefs(tools) : undefined;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
 
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
     const body: any = { model, messages: msgs, max_tokens: 1024 };
@@ -510,6 +536,10 @@ async function runOpenAILoop(
       throw new Error(`OpenAI ${res.status}: ${err.slice(0, 200)}`);
     }
     const data = await res.json();
+    if (data.usage) {
+      totalInputTokens += data.usage.prompt_tokens || 0;
+      totalOutputTokens += data.usage.completion_tokens || 0;
+    }
     const choice = data.choices?.[0];
     const message = choice?.message;
 
@@ -517,7 +547,7 @@ async function runOpenAILoop(
 
     // If no tool calls, return text
     if (!message.tool_calls || message.tool_calls.length === 0) {
-      return { text: message.content || "(no response)", toolCalls };
+      return { text: message.content || "(no response)", toolCalls, usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens } };
     }
 
     // Add assistant message with tool calls
@@ -534,7 +564,7 @@ async function runOpenAILoop(
     }
   }
 
-  return { text: "(max tool iterations reached)", toolCalls };
+  return { text: "(max tool iterations reached)", toolCalls, usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens } };
 }
 
 // ─── Anthropic Loop ───
@@ -549,6 +579,8 @@ async function runAnthropicLoop(
   const msgs: any[] = history.map((m) => ({ role: m.role, content: m.content }));
   const toolCalls: ToolCallRecord[] = [];
   const toolsDef = tools.length > 0 ? anthropicToolDefs(tools) : undefined;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
 
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
     const body: any = { model, system: systemPrompt, messages: msgs, max_tokens: 1024 };
@@ -558,8 +590,6 @@ async function runAnthropicLoop(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Support both regular API keys (x-api-key) and OAuth tokens (Authorization: Bearer)
-        // OAuth tokens contain "oat" in the prefix (sk-ant-oat...)
         ...(apiKey.includes("-oat")
           ? { "Authorization": `Bearer ${apiKey}` }
           : { "x-api-key": apiKey }),
@@ -572,38 +602,34 @@ async function runAnthropicLoop(
       throw new Error(`Anthropic ${res.status}: ${err.slice(0, 200)}`);
     }
     const data = await res.json();
+    if (data.usage) {
+      totalInputTokens += data.usage.input_tokens || 0;
+      totalOutputTokens += data.usage.output_tokens || 0;
+    }
 
-    // Check for tool_use blocks
     const toolUseBlocks = data.content?.filter((b: any) => b.type === "tool_use") || [];
     const textBlocks = data.content?.filter((b: any) => b.type === "text") || [];
 
     if (toolUseBlocks.length === 0) {
-      return { text: textBlocks[0]?.text || "(no response)", toolCalls };
+      return { text: textBlocks[0]?.text || "(no response)", toolCalls, usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens } };
     }
 
-    // Add assistant message
     msgs.push({ role: "assistant", content: data.content });
 
-    // Execute tools and build tool_result blocks
     const resultBlocks: any[] = [];
     for (const block of toolUseBlocks) {
       const result = await executeTool(block.name, block.input, tools);
       toolCalls.push({ tool: block.name, args: JSON.stringify(block.input), result });
-      resultBlocks.push({
-        type: "tool_result",
-        tool_use_id: block.id,
-        content: result,
-      });
+      resultBlocks.push({ type: "tool_result", tool_use_id: block.id, content: result });
     }
     msgs.push({ role: "user", content: resultBlocks });
 
-    // If stop_reason is end_turn (not tool_use), we're done
     if (data.stop_reason === "end_turn") {
-      return { text: textBlocks[0]?.text || "(no response)", toolCalls };
+      return { text: textBlocks[0]?.text || "(no response)", toolCalls, usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens } };
     }
   }
 
-  return { text: "(max tool iterations reached)", toolCalls };
+  return { text: "(max tool iterations reached)", toolCalls, usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens } };
 }
 
 // ─── Google Loop ───
@@ -624,6 +650,8 @@ async function runGoogleLoop(
   }));
   const toolCalls: ToolCallRecord[] = [];
   const toolsDef = tools.length > 0 ? googleToolDefs(tools) : undefined;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
 
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
     const body: any = {
@@ -642,32 +670,32 @@ async function runGoogleLoop(
       throw new Error(`Google ${res.status}: ${err.slice(0, 200)}`);
     }
     const data = await res.json();
+    if (data.usageMetadata) {
+      totalInputTokens += data.usageMetadata.promptTokenCount || 0;
+      totalOutputTokens += data.usageMetadata.candidatesTokenCount || 0;
+    }
     const parts = data.candidates?.[0]?.content?.parts || [];
 
     const fnCalls = parts.filter((p: any) => p.functionCall);
     const textParts = parts.filter((p: any) => p.text);
 
     if (fnCalls.length === 0) {
-      return { text: textParts[0]?.text || "(no response)", toolCalls };
+      return { text: textParts[0]?.text || "(no response)", toolCalls, usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens } };
     }
 
-    // Add model response
     contents.push({ role: "model", parts });
 
-    // Execute and respond
     const responseParts: any[] = [];
     for (const part of fnCalls) {
       const { name, args } = part.functionCall;
       const result = await executeTool(name, args, tools);
       toolCalls.push({ tool: name, args: JSON.stringify(args), result });
-      responseParts.push({
-        functionResponse: { name, response: { result } },
-      });
+      responseParts.push({ functionResponse: { name, response: { result } } });
     }
     contents.push({ role: "user", parts: responseParts });
   }
 
-  return { text: "(max tool iterations reached)", toolCalls };
+  return { text: "(max tool iterations reached)", toolCalls, usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens } };
 }
 
 // ─── Agent-to-Agent Chat ───

@@ -97,6 +97,11 @@ export default defineSchema({
       result: v.optional(v.string()),
     }))),
     streaming: v.optional(v.boolean()),
+    // Token usage tracking
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    model: v.optional(v.string()),
+    provider: v.optional(v.string()),
   }).index("by_agent_and_user", ["agentId", "clerkId"]),
 
   // Org chart connections

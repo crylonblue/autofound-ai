@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
-import { ArrowLeft, Send, Trash2, Loader2, Info } from "lucide-react";
+import { ArrowLeft, Send, Trash2, Loader2, Info, Zap } from "lucide-react";
 import { api } from "../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
 import MarkdownMessage from "../../../../../components/MarkdownMessage";
@@ -21,6 +21,10 @@ export default function ChatPage() {
   const agent = useQuery(api.agents.getAgent, { agentId });
   const messages = useQuery(
     api.messages.list,
+    clerkId ? { agentId, clerkId } : "skip"
+  );
+  const usageStats = useQuery(
+    api.messages.getUsageStats,
     clerkId ? { agentId, clerkId } : "skip"
   );
   const sendMessage = useMutation(api.messages.send);
@@ -162,6 +166,12 @@ export default function ChatPage() {
                     ))}
                   </div>
                 )}
+                {msg.role === "agent" && (msg.inputTokens || msg.outputTokens) && (
+                  <div className="mt-1.5 flex items-center gap-1 text-[10px] text-zinc-500">
+                    <Zap className="w-3 h-3" />
+                    {((msg.inputTokens || 0) + (msg.outputTokens || 0)).toLocaleString()} tokens
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -244,6 +254,25 @@ export default function ChatPage() {
               <div>
                 <p className="text-xs text-zinc-500 mb-1">Model</p>
                 <p className="text-zinc-300">{agent.model}</p>
+              </div>
+            )}
+            {usageStats && usageStats.totalTokens > 0 && (
+              <div>
+                <p className="text-xs text-zinc-500 mb-1">Token Usage</p>
+                <div className="space-y-1 text-xs text-zinc-300">
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Input</span>
+                    <span>{usageStats.totalInputTokens.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Output</span>
+                    <span>{usageStats.totalOutputTokens.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between pt-1 border-t border-white/10 font-medium">
+                    <span className="text-zinc-400">Total</span>
+                    <span>{usageStats.totalTokens.toLocaleString()}</span>
+                  </div>
+                </div>
               </div>
             )}
             <div>

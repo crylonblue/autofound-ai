@@ -104,12 +104,55 @@ export const finalizeMessage = mutation({
       args: v.optional(v.string()),
       result: v.optional(v.string()),
     }))),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    model: v.optional(v.string()),
+    provider: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.messageId, {
       streaming: false,
       ...(args.toolCalls ? { toolCalls: args.toolCalls } : {}),
+      ...(args.inputTokens !== undefined ? { inputTokens: args.inputTokens } : {}),
+      ...(args.outputTokens !== undefined ? { outputTokens: args.outputTokens } : {}),
+      ...(args.model ? { model: args.model } : {}),
+      ...(args.provider ? { provider: args.provider } : {}),
     });
+  },
+});
+
+export const getUsageStats = query({
+  args: {
+    agentId: v.id("agents"),
+    clerkId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_agent_and_user", (q) =>
+        q.eq("agentId", args.agentId).eq("clerkId", args.clerkId)
+      )
+      .collect();
+
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let messagesWithUsage = 0;
+
+    for (const msg of messages) {
+      if (msg.inputTokens || msg.outputTokens) {
+        totalInputTokens += msg.inputTokens || 0;
+        totalOutputTokens += msg.outputTokens || 0;
+        messagesWithUsage++;
+      }
+    }
+
+    return {
+      totalInputTokens,
+      totalOutputTokens,
+      totalTokens: totalInputTokens + totalOutputTokens,
+      messagesWithUsage,
+      totalMessages: messages.length,
+    };
   },
 });
 
