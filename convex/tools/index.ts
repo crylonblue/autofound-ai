@@ -3,6 +3,7 @@ import { webSearch } from "./webSearch";
 import { webFetch } from "./webFetch";
 import { createSendMessageToAgentTool } from "./sendMessageToAgent";
 import { createFileTools } from "./fileAccess";
+import { createPodTools } from "./podTools";
 import { codeExecute } from "./codeExecute";
 import { ActionCtx } from "../_generated/server";
 import { Id } from "../_generated/dataModel";
@@ -25,6 +26,8 @@ export function getEnabledTools(
     clerkId: string;
     agentId: Id<"agents">;
     depth: number;
+    podUrl?: string;
+    podSecret?: string;
   }
 ): ToolDefinition[] {
   if (!toolNames || toolNames.length === 0) return [];
@@ -49,6 +52,14 @@ export function getEnabledTools(
     );
     for (const ft of fileTools) {
       available[ft.name] = ft;
+    }
+
+    // Pod tools (persistent Fly Machine) — adds shell_exec, pod_file_read, pod_file_write
+    if (runtimeCtx.podUrl && runtimeCtx.podSecret) {
+      const podToolList = createPodTools(runtimeCtx.podUrl, runtimeCtx.podSecret);
+      for (const pt of podToolList) {
+        available[pt.name] = pt;
+      }
     }
   }
 

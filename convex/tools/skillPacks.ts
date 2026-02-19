@@ -23,6 +23,12 @@ export const SKILL_PACKS = {
     icon: "🖥️",
     tools: ["code_execute"],
   },
+  "pod-compute": {
+    name: "Pod Compute",
+    description: "Execute shell commands and manage files on a persistent Linux compute pod",
+    icon: "🐳",
+    tools: ["shell_exec", "pod_file_read", "pod_file_write"],
+  },
 } as const;
 
 export type SkillPackKey = keyof typeof SKILL_PACKS;

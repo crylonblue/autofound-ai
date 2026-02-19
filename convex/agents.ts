@@ -80,6 +80,8 @@ export const createAgentByClerk = mutation({
       status: "active",
       runCount: 0,
     });
+    // Provision a persistent Fly Machine pod for this agent
+    await ctx.scheduler.runAfter(0, api.podManager.provisionPod, { agentId });
     return agentId;
   },
 });
@@ -123,6 +125,17 @@ export const updateAgent = mutation({
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
     );
+    // Handle pod lifecycle on status change
+    if (args.status) {
+      const agent = await ctx.db.get(agentId);
+      if (agent?.machineId) {
+        if (args.status === "paused" && agent.status !== "paused") {
+          await ctx.scheduler.runAfter(0, api.podManager.stopPod, { agentId });
+        } else if (args.status === "active" && agent.status === "paused") {
+          await ctx.scheduler.runAfter(0, api.podManager.startPod, { agentId });
+        }
+      }
+    }
     await ctx.db.patch(agentId, filtered);
   },
 });
@@ -136,6 +149,8 @@ export const deleteAgent = mutation({
       .withIndex("by_agent", (q) => q.eq("agentId", args.agentId))
       .first();
     if (hb) await ctx.db.delete(hb._id);
+    // Destroy the agent's Fly Machine pod
+    await ctx.scheduler.runAfter(0, api.podManager.destroyPod, { agentId: args.agentId });
     await ctx.db.delete(args.agentId);
   },
 });

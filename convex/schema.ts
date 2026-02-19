@@ -36,6 +36,16 @@ export default defineSchema({
     tools: v.optional(v.array(v.string())),
     reportsTo: v.optional(v.id("agents")),
     status: v.union(v.literal("active"), v.literal("paused"), v.literal("draft")),
+    // Persistent Fly Machine (pod) fields
+    machineId: v.optional(v.string()),
+    podUrl: v.optional(v.string()),
+    podSecret: v.optional(v.string()),
+    podStatus: v.optional(v.union(
+      v.literal("provisioning"),
+      v.literal("running"),
+      v.literal("stopped"),
+      v.literal("error")
+    )),
     createdAt: v.number(),
   }).index("by_user", ["userId"]),
 

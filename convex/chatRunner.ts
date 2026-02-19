@@ -112,11 +112,14 @@ export const respondToMessage = action({
       : getAllToolNames();
 
     // Get enabled tools for this agent (depth=0 for user-initiated chats)
+    // Pass pod info so shell_exec routes through the persistent machine
     const tools = getEnabledTools(resolvedToolNames, {
       ctx,
       clerkId: args.clerkId,
       agentId: args.agentId,
       depth: 0,
+      podUrl: agent.podStatus === "running" ? agent.podUrl : undefined,
+      podSecret: agent.podStatus === "running" ? agent.podSecret : undefined,
     });
 
     const chatHistory = messages.slice(-20).map((m) => ({
@@ -752,6 +755,8 @@ export const agentToAgentChat = action({
       clerkId: args.clerkId,
       agentId: args.targetAgentId,
       depth: args.depth,
+      podUrl: targetAgent.podStatus === "running" ? targetAgent.podUrl : undefined,
+      podSecret: targetAgent.podStatus === "running" ? targetAgent.podSecret : undefined,
     });
 
     const basePrompt = await buildEnhancedSystemPrompt(
