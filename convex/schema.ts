@@ -46,8 +46,22 @@ export default defineSchema({
       v.literal("stopped"),
       v.literal("error")
     )),
+    telegramChatId: v.optional(v.string()),
     createdAt: v.number(),
-  }).index("by_user", ["userId"]),
+  }).index("by_user", ["userId"])
+    .index("by_telegram_chat_id", ["telegramChatId"]),
+
+  // Telegram link codes for connecting agents to Telegram chats
+  telegramLinks: defineTable({
+    agentId: v.id("agents"),
+    clerkUserId: v.string(),
+    chatId: v.optional(v.string()),
+    linkedAt: v.optional(v.number()),
+    linkCode: v.string(),
+    createdAt: v.number(),
+  }).index("by_link_code", ["linkCode"])
+    .index("by_agent", ["agentId"])
+    .index("by_chat_id", ["chatId"]),
 
   // Tasks assigned to agents
   tasks: defineTable({
@@ -107,6 +121,7 @@ export default defineSchema({
       result: v.optional(v.string()),
     }))),
     streaming: v.optional(v.boolean()),
+    source: v.optional(v.union(v.literal("web"), v.literal("telegram"))),
     // Token usage tracking
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),

@@ -24,6 +24,8 @@ import type * as podManager from "../podManager.js";
 import type * as podMutations from "../podMutations.js";
 import type * as r2 from "../r2.js";
 import type * as tasks from "../tasks.js";
+import type * as telegram from "../telegram.js";
+import type * as telegramActions from "../telegramActions.js";
 import type * as tools_codeExecute from "../tools/codeExecute.js";
 import type * as tools_fileAccess from "../tools/fileAccess.js";
 import type * as tools_index from "../tools/index.js";
@@ -58,6 +60,8 @@ declare const fullApi: ApiFromModules<{
   podMutations: typeof podMutations;
   r2: typeof r2;
   tasks: typeof tasks;
+  telegram: typeof telegram;
+  telegramActions: typeof telegramActions;
   "tools/codeExecute": typeof tools_codeExecute;
   "tools/fileAccess": typeof tools_fileAccess;
   "tools/index": typeof tools_index;

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Search, Play, Pause, Trash2, X, Edit2, Loader2, MessageSquare, Heart } from "lucide-react";
+import { Plus, Search, Play, Pause, Trash2, X, Edit2, Loader2, MessageSquare, Heart, Send } from "lucide-react";
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
-import type { Id } from "../../../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../../../convex/_generated/dataModel";
 import { SKILL_PACKS, ALL_SKILL_KEYS, DEFAULT_SKILLS, type SkillPackKey } from "../../../lib/skillPacks";
 
 function useClerkUser() {
@@ -62,6 +62,8 @@ export default function AgentsPage() {
   const [form, setForm] = useState<AgentForm>(emptyForm);
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
+  const [telegramCode, setTelegramCode] = useState<{ agentId: string; code: string } | null>(null);
+  const generateLinkCode = useMutation(api.telegram.generateLinkCode);
 
   const openEdit = (agent: NonNullable<typeof agents>[number]) => {
     setEditingId(agent._id);
@@ -279,13 +281,32 @@ export default function AgentsPage() {
                 </div>
               );
             })()}
-            <Link
-              href={`/agents/${agent._id}/chat`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 text-blue-400 rounded-lg text-xs font-medium hover:bg-blue-600/30 transition-colors"
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              Chat
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/agents/${agent._id}/chat`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 text-blue-400 rounded-lg text-xs font-medium hover:bg-blue-600/30 transition-colors"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                Chat
+              </Link>
+              {agent.telegramChatId ? (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded-lg text-[10px]">
+                  <Send className="w-3 h-3" /> Telegram ✓
+                </span>
+              ) : (
+                <button
+                  onClick={async () => {
+                    if (!clerkId) return;
+                    const code = await generateLinkCode({ agentId: agent._id, clerkId });
+                    setTelegramCode({ agentId: agent._id as string, code });
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600/20 text-cyan-400 rounded-lg text-xs font-medium hover:bg-cyan-600/30 transition-colors"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  Telegram
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -392,6 +413,31 @@ export default function AgentsPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Telegram Link Code Modal */}
+      {telegramCode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#111] border border-white/10 rounded-2xl w-full max-w-sm p-6 text-center">
+            <div className="text-4xl mb-4">📱</div>
+            <h2 className="text-lg font-bold mb-2">Connect Telegram</h2>
+            <p className="text-sm text-zinc-400 mb-4">
+              Send this command to your Telegram bot:
+            </p>
+            <div className="bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 mb-4 font-mono text-lg tracking-wider select-all">
+              /link {telegramCode.code}
+            </div>
+            <p className="text-xs text-zinc-500 mb-4">
+              Open Telegram, find your bot, and send the command above to link this agent.
+            </p>
+            <button
+              onClick={() => setTelegramCode(null)}
+              className="px-4 py-2 bg-white/10 rounded-lg text-sm hover:bg-white/20 transition-colors"
+            >
+              Done
+            </button>
           </div>
         </div>
       )}

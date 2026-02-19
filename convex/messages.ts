@@ -24,6 +24,7 @@ export const send = mutation({
     agentId: v.id("agents"),
     clerkId: v.string(),
     content: v.string(),
+    source: v.optional(v.union(v.literal("web"), v.literal("telegram"))),
   },
   handler: async (ctx, args) => {
     const messageId = await ctx.db.insert("messages", {
@@ -32,6 +33,7 @@ export const send = mutation({
       role: "user",
       content: args.content,
       timestamp: Date.now(),
+      source: args.source,
     });
     // Trigger agent response
     await ctx.scheduler.runAfter(0, api.chatRunner.respondToMessage, {
