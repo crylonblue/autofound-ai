@@ -3,6 +3,7 @@ import { webSearch } from "./webSearch";
 import { webFetch } from "./webFetch";
 import { createSendMessageToAgentTool } from "./sendMessageToAgent";
 import { createFileTools } from "./fileAccess";
+import { createMemoryTools } from "./memory";
 import { createPodTools } from "./podTools";
 import { codeExecute } from "./codeExecute";
 import { ActionCtx } from "../_generated/server";
@@ -52,6 +53,16 @@ export function getEnabledTools(
     );
     for (const ft of fileTools) {
       available[ft.name] = ft;
+    }
+
+    // Memory tools (persistent memory across sessions)
+    const memoryTools = createMemoryTools(
+      runtimeCtx.ctx,
+      runtimeCtx.clerkId,
+      runtimeCtx.agentId as string
+    );
+    for (const mt of memoryTools) {
+      available[mt.name] = mt;
     }
 
     // Pod tools (persistent Fly Machine) — adds shell_exec, pod_file_read, pod_file_write

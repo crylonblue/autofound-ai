@@ -17,6 +17,12 @@ export const SKILL_PACKS = {
     icon: "📁",
     tools: ["read_file", "write_file", "list_files", "delete_file"],
   },
+  "memory": {
+    name: "Memory",
+    description: "Read and write persistent memory that survives across chat sessions",
+    icon: "🧠",
+    tools: ["memory_read", "memory_write"],
+  },
   "code-execution": {
     name: "Code Execution",
     description: "Execute JavaScript code for calculations and data processing",

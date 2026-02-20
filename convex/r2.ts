@@ -87,6 +87,25 @@ export const deleteFile = action({
   },
 });
 
+// Delete all files under a prefix (for agent cleanup)
+export const deletePrefix = action({
+  args: { clerkId: v.string(), prefix: v.string() },
+  handler: async (_ctx, { clerkId, prefix }) => {
+    const client = getR2Client();
+    const fullPrefix = `${clerkId}/${prefix}`;
+    const res = await client.send(
+      new ListObjectsV2Command({ Bucket: bucket(), Prefix: fullPrefix })
+    );
+    const keys = res.Contents?.map((obj) => obj.Key).filter(Boolean) ?? [];
+    await Promise.all(
+      keys.map((key) =>
+        client.send(new DeleteObjectCommand({ Bucket: bucket(), Key: key! }))
+      )
+    );
+    return { deleted: keys.length };
+  },
+});
+
 // Initialize R2 files for a newly created agent
 export const initAgentFiles = action({
   args: {

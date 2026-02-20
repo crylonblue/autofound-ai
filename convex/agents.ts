@@ -143,6 +143,7 @@ export const updateAgent = mutation({
 export const deleteAgent = mutation({
   args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
+    const agent = await ctx.db.get(args.agentId);
     // Delete heartbeat record
     const hb = await ctx.db
       .query("heartbeats")
@@ -151,6 +152,16 @@ export const deleteAgent = mutation({
     if (hb) await ctx.db.delete(hb._id);
     // Destroy the agent's Fly Machine pod
     await ctx.scheduler.runAfter(0, api.podManager.destroyPod, { agentId: args.agentId });
+    // Clean up R2 files for this agent
+    if (agent) {
+      const user = await ctx.db.get(agent.userId);
+      if (user?.clerkId) {
+        await ctx.scheduler.runAfter(0, api.r2.deletePrefix, {
+          clerkId: user.clerkId,
+          prefix: `agents/${args.agentId}`,
+        });
+      }
+    }
     await ctx.db.delete(args.agentId);
   },
 });
