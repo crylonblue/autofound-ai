@@ -29,6 +29,7 @@ import type * as telegramActions from "../telegramActions.js";
 import type * as tools_codeExecute from "../tools/codeExecute.js";
 import type * as tools_fileAccess from "../tools/fileAccess.js";
 import type * as tools_index from "../tools/index.js";
+import type * as tools_memory from "../tools/memory.js";
 import type * as tools_podTools from "../tools/podTools.js";
 import type * as tools_sendMessageToAgent from "../tools/sendMessageToAgent.js";
 import type * as tools_skillPacks from "../tools/skillPacks.js";
@@ -65,6 +66,7 @@ declare const fullApi: ApiFromModules<{
   "tools/codeExecute": typeof tools_codeExecute;
   "tools/fileAccess": typeof tools_fileAccess;
   "tools/index": typeof tools_index;
+  "tools/memory": typeof tools_memory;
   "tools/podTools": typeof tools_podTools;
   "tools/sendMessageToAgent": typeof tools_sendMessageToAgent;
   "tools/skillPacks": typeof tools_skillPacks;

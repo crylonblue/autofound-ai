@@ -80,6 +80,11 @@ export const createAgentByClerk = mutation({
       status: "active",
       runCount: 0,
     });
+    // Fire first heartbeat immediately
+    await ctx.scheduler.runAfter(0, api.heartbeatRunner.runHeartbeat, {
+      agentId,
+      clerkId: args.clerkId,
+    });
     // Provision a persistent Fly Machine pod for this agent
     await ctx.scheduler.runAfter(0, api.podManager.provisionPod, { agentId });
     return agentId;
@@ -133,6 +138,20 @@ export const updateAgent = mutation({
           await ctx.scheduler.runAfter(0, api.podManager.stopPod, { agentId });
         } else if (args.status === "active" && agent.status === "paused") {
           await ctx.scheduler.runAfter(0, api.podManager.startPod, { agentId });
+        }
+      }
+      // Sync heartbeat status with agent status
+      if (agent) {
+        const hb = await ctx.db
+          .query("heartbeats")
+          .withIndex("by_agent", (q) => q.eq("agentId", agentId))
+          .first();
+        if (hb) {
+          if (args.status === "paused" && hb.status !== "paused") {
+            await ctx.db.patch(hb._id, { status: "paused" });
+          } else if (args.status === "active" && hb.status === "paused") {
+            await ctx.db.patch(hb._id, { status: "active" });
+          }
         }
       }
     }
