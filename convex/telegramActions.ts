@@ -58,7 +58,7 @@ export const registerWebhook = action({
     const botUsername = meData.result.username;
 
     // Set webhook
-    const webhookUrl = `https://autofound.ai/api/webhooks/telegram/${args.agentId}`;
+    const webhookUrl = `https://www.autofound.ai/api/webhooks/telegram/${args.agentId}`;
     const whRes = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -116,6 +116,19 @@ export const handleTelegramMessage = action({
       // For now we proceed without updating — the webhook URL already identifies the agent
     }
 
+    // Send typing indicator
+    const botToken = agent.telegramBotToken ? decrypt(agent.telegramBotToken) : null;
+    async function sendTyping() {
+      if (!botToken) return;
+      await fetch(`https://api.telegram.org/bot${botToken}/sendChatAction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: args.chatId, action: "typing" }),
+      }).catch(() => {});
+    }
+
+    await sendTyping();
+
     // Store user message
     await ctx.runMutation(api.messages.send, {
       agentId: agent._id,
@@ -124,9 +137,10 @@ export const handleTelegramMessage = action({
       source: "telegram",
     });
 
-    // Poll for agent response
+    // Poll for agent response (send typing every 5s)
     const startTime = Date.now();
     const timeout = 120_000;
+    let lastTyping = Date.now();
 
     const initialMsgs = await ctx.runQuery(api.messages.list, {
       agentId: agent._id,
@@ -136,6 +150,12 @@ export const handleTelegramMessage = action({
 
     while (Date.now() - startTime < timeout) {
       await new Promise((r) => setTimeout(r, 2000));
+
+      // Refresh typing indicator every 5s
+      if (Date.now() - lastTyping > 4500) {
+        await sendTyping();
+        lastTyping = Date.now();
+      }
 
       const msgs = await ctx.runQuery(api.messages.list, {
         agentId: agent._id,
