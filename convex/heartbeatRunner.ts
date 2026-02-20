@@ -12,6 +12,43 @@ const MAX_TOOL_ITERATIONS = 10;
 const MAX_SOUL_CHARS = 2000;
 const MAX_MEMORY_CHARS = 4000;
 
+const RETRYABLE_STATUS_CODES = new Set([401, 429, 500, 502, 503, 529]);
+
+function isRetryableError(err: unknown): boolean {
+  if (err instanceof Error) {
+    const msg = err.message;
+    for (const code of RETRYABLE_STATUS_CODES) {
+      if (msg.includes(` ${code}:`)) return true;
+    }
+    if (/timeout|ETIMEDOUT|ECONNRESET|fetch failed|network/i.test(msg)) return true;
+  }
+  return false;
+}
+
+type ProviderConfig = { provider: "openai" | "anthropic" | "google"; model: string; apiKey: string };
+
+function buildFailoverChain(
+  preferredProvider: "openai" | "anthropic" | "google",
+  preferredModel: string,
+  user: { apiKeys?: { openai?: string; anthropic?: string; google?: string } },
+  decryptFn: (enc: string) => string
+): ProviderConfig[] {
+  const order: Array<{ provider: "openai" | "anthropic" | "google"; model: string }> = [
+    { provider: "anthropic", model: "claude-sonnet-4-20250514" },
+    { provider: "openai", model: "gpt-4o-mini" },
+    { provider: "google", model: "gemini-1.5-flash" },
+  ];
+  const chain: ProviderConfig[] = [];
+  const preferredKey = user.apiKeys?.[preferredProvider];
+  if (preferredKey) chain.push({ provider: preferredProvider, model: preferredModel, apiKey: decryptFn(preferredKey).trim() });
+  for (const fb of order) {
+    if (fb.provider === preferredProvider) continue;
+    const key = user.apiKeys?.[fb.provider];
+    if (key) chain.push({ provider: fb.provider, model: fb.model, apiKey: decryptFn(key).trim() });
+  }
+  return chain;
+}
+
 export const runHeartbeat = action({
   args: {
     agentId: v.id("agents"),
@@ -96,41 +133,22 @@ ${msgList}
 
 Be concise. Focus on action, not narration.`;
 
-      // Determine provider and get API key (with fallback, same as chatRunner)
-      let model = agent.model || "claude-opus-4-6";
-      let provider: "openai" | "anthropic" | "google";
-      if (model.startsWith("claude")) provider = "anthropic";
-      else if (model.startsWith("gemini")) provider = "google";
-      else provider = "openai";
+      // Build failover chain
+      let preferredModel = agent.model || "claude-opus-4-6";
+      let preferredProvider: "openai" | "anthropic" | "google";
+      if (preferredModel.startsWith("claude")) preferredProvider = "anthropic";
+      else if (preferredModel.startsWith("gemini")) preferredProvider = "google";
+      else preferredProvider = "openai";
 
-      let encryptedKey = user.apiKeys?.[provider];
+      const failoverChain = buildFailoverChain(preferredProvider, preferredModel, user, decrypt);
 
-      // Fallback to any available key
-      if (!encryptedKey) {
-        const fallbacks: Array<{ p: "openai" | "anthropic" | "google"; m: string }> = [
-          { p: "anthropic", m: "claude-opus-4-6" },
-          { p: "openai", m: "gpt-4o-mini" },
-          { p: "google", m: "gemini-1.5-flash" },
-        ];
-        for (const fb of fallbacks) {
-          if (fb.p !== provider && user.apiKeys?.[fb.p]) {
-            provider = fb.p;
-            model = fb.m;
-            encryptedKey = user.apiKeys[fb.p];
-            break;
-          }
-        }
-      }
-
-      if (!encryptedKey) {
+      if (failoverChain.length === 0) {
         await ctx.runMutation(api.heartbeats.recordHeartbeat, {
           agentId: args.agentId,
           lastResult: `No API key configured for any provider.`,
         });
         return;
       }
-
-      const apiKey = decrypt(encryptedKey).trim();
 
       // Get tools (same as chatRunner)
       const resolvedToolNames = agent.tools && agent.tools.length > 0
@@ -146,14 +164,29 @@ Be concise. Focus on action, not narration.`;
 
       const chatHistory: ChatMessage[] = [{ role: "user", content: heartbeatPrompt }];
 
-      // Run the tool-use loop (non-streaming)
-      let result: LoopResult;
-      if (provider === "openai") {
-        result = await runOpenAILoop(apiKey, model, systemPrompt, chatHistory, tools);
-      } else if (provider === "anthropic") {
-        result = await runAnthropicLoop(apiKey, model, systemPrompt, chatHistory, tools);
-      } else {
-        result = await runGoogleLoop(apiKey, model, systemPrompt, chatHistory, tools);
+      // Run with failover
+      let result: LoopResult | null = null;
+      let lastError: Error | null = null;
+      for (const config of failoverChain) {
+        try {
+          if (config.provider === "openai") {
+            result = await runOpenAILoop(config.apiKey, config.model, systemPrompt, chatHistory, tools);
+          } else if (config.provider === "anthropic") {
+            result = await runAnthropicLoop(config.apiKey, config.model, systemPrompt, chatHistory, tools);
+          } else {
+            result = await runGoogleLoop(config.apiKey, config.model, systemPrompt, chatHistory, tools);
+          }
+          lastError = null;
+          break;
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`[heartbeat failover] ${config.provider}/${config.model} failed: ${err.message?.slice(0, 150)}`);
+          if (!isRetryableError(err)) break;
+        }
+      }
+
+      if (!result) {
+        throw lastError || new Error("All providers failed");
       }
 
       // Build result summary

@@ -12,6 +12,57 @@ const MAX_TOOL_ITERATIONS = 10;
 const MAX_SOUL_CHARS = 2000;
 const MAX_MEMORY_CHARS = 4000;
 
+// ─── Provider Failover Config ───
+
+type ProviderConfig = { provider: "openai" | "anthropic" | "google"; model: string; apiKey: string };
+
+const PROVIDER_FALLBACK_ORDER: Array<{ provider: "openai" | "anthropic" | "google"; model: string }> = [
+  { provider: "anthropic", model: "claude-sonnet-4-20250514" },
+  { provider: "openai", model: "gpt-4o-mini" },
+  { provider: "google", model: "gemini-1.5-flash" },
+];
+
+const RETRYABLE_STATUS_CODES = new Set([401, 429, 500, 502, 503, 529]);
+
+/**
+ * Build an ordered list of provider configs to try, starting with the preferred one.
+ * Falls back to other providers the user has keys for.
+ */
+function buildFailoverChain(
+  preferredProvider: "openai" | "anthropic" | "google",
+  preferredModel: string,
+  user: { apiKeys?: { openai?: string; anthropic?: string; google?: string } },
+  decryptFn: (enc: string) => string
+): ProviderConfig[] {
+  const chain: ProviderConfig[] = [];
+  const preferredKey = user.apiKeys?.[preferredProvider];
+  if (preferredKey) {
+    chain.push({ provider: preferredProvider, model: preferredModel, apiKey: decryptFn(preferredKey).trim() });
+  }
+  for (const fb of PROVIDER_FALLBACK_ORDER) {
+    if (fb.provider === preferredProvider) continue;
+    const key = user.apiKeys?.[fb.provider];
+    if (key) {
+      chain.push({ provider: fb.provider, model: fb.model, apiKey: decryptFn(key).trim() });
+    }
+  }
+  return chain;
+}
+
+/** Check if an error is retryable (HTTP status or timeout) */
+function isRetryableError(err: unknown): boolean {
+  if (err instanceof Error) {
+    const msg = err.message;
+    // Check for HTTP status codes in our error format "Provider NNN: ..."
+    for (const code of RETRYABLE_STATUS_CODES) {
+      if (msg.includes(` ${code}:`)) return true;
+    }
+    // Timeout / network errors
+    if (/timeout|ETIMEDOUT|ECONNRESET|fetch failed|network/i.test(msg)) return true;
+  }
+  return false;
+}
+
 async function buildEnhancedSystemPrompt(
   ctx: any,
   clerkId: string,
@@ -69,33 +120,16 @@ export const respondToMessage = action({
       clerkId: args.clerkId,
     });
 
-    // Determine provider from agent model, with fallback to any available key
-    let model = agent.model || "claude-opus-4-6";
-    let provider: "openai" | "anthropic" | "google";
-    if (model.startsWith("claude")) provider = "anthropic";
-    else if (model.startsWith("gemini")) provider = "google";
-    else provider = "openai";
+    // Build failover chain: preferred provider first, then alternatives
+    let preferredModel = agent.model || "claude-opus-4-6";
+    let preferredProvider: "openai" | "anthropic" | "google";
+    if (preferredModel.startsWith("claude")) preferredProvider = "anthropic";
+    else if (preferredModel.startsWith("gemini")) preferredProvider = "google";
+    else preferredProvider = "openai";
 
-    let encryptedKey = user.apiKeys?.[provider];
+    const failoverChain = buildFailoverChain(preferredProvider, preferredModel, user, decrypt);
 
-    // If preferred provider key is missing, try to fall back to any available key
-    if (!encryptedKey) {
-      const fallbacks: Array<{ p: "openai" | "anthropic" | "google"; m: string }> = [
-        { p: "anthropic", m: "claude-opus-4-6" },
-        { p: "openai", m: "gpt-4o-mini" },
-        { p: "google", m: "gemini-1.5-flash" },
-      ];
-      for (const fb of fallbacks) {
-        if (fb.p !== provider && user.apiKeys?.[fb.p]) {
-          provider = fb.p;
-          model = fb.m;
-          encryptedKey = user.apiKeys[fb.p];
-          break;
-        }
-      }
-    }
-
-    if (!encryptedKey) {
+    if (failoverChain.length === 0) {
       await ctx.runMutation(api.messages.addAgentMessage, {
         agentId: args.agentId,
         clerkId: args.clerkId,
@@ -103,8 +137,6 @@ export const respondToMessage = action({
       });
       return;
     }
-
-    const apiKey = decrypt(encryptedKey).trim();
 
     // Resolve skill pack keys → tool names (backward compat: no skills = all tools)
     const resolvedToolNames = agent.tools && agent.tools.length > 0
@@ -140,33 +172,53 @@ export const respondToMessage = action({
 
     const streamCallback = createStreamCallback(ctx, streamingMessageId);
 
-    let responseText: string;
+    let responseText: string = "";
     const collectedToolCalls: { tool: string; args?: string; result?: string }[] = [];
     let tokenUsage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
+    let usedProvider: "openai" | "anthropic" | "google" = failoverChain[0].provider;
+    let usedModel: string = failoverChain[0].model;
 
-    try {
-      if (provider === "openai") {
-        const result = await runOpenAIStreamingLoop(apiKey, model, enhancedSystemPrompt, chatHistory, tools, streamCallback);
+    // Try each provider in the failover chain
+    let lastError: Error | null = null;
+    for (const config of failoverChain) {
+      try {
+        // Reset stream buffer for retry attempts
+        streamCallback.reset();
+
+        let result: LoopResult;
+        if (config.provider === "openai") {
+          result = await runOpenAIStreamingLoop(config.apiKey, config.model, enhancedSystemPrompt, chatHistory, tools, streamCallback);
+        } else if (config.provider === "anthropic") {
+          result = await runAnthropicStreamingLoop(config.apiKey, config.model, enhancedSystemPrompt, chatHistory, tools, streamCallback);
+        } else {
+          result = await runGoogleLoop(config.apiKey, config.model, enhancedSystemPrompt, chatHistory, tools);
+          await ctx.runMutation(api.messages.appendToMessage, {
+            messageId: streamingMessageId,
+            text: result.text,
+          });
+        }
+
         responseText = result.text;
         collectedToolCalls.push(...result.toolCalls);
         tokenUsage = result.usage;
-      } else if (provider === "anthropic") {
-        const result = await runAnthropicStreamingLoop(apiKey, model, enhancedSystemPrompt, chatHistory, tools, streamCallback);
-        responseText = result.text;
-        collectedToolCalls.push(...result.toolCalls);
-        tokenUsage = result.usage;
-      } else {
-        const result = await runGoogleLoop(apiKey, model, enhancedSystemPrompt, chatHistory, tools);
-        responseText = result.text;
-        collectedToolCalls.push(...result.toolCalls);
-        tokenUsage = result.usage;
-        await ctx.runMutation(api.messages.appendToMessage, {
-          messageId: streamingMessageId,
-          text: responseText,
-        });
+        usedProvider = config.provider;
+        usedModel = config.model;
+        lastError = null;
+        break; // Success — stop trying
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[failover] ${config.provider}/${config.model} failed: ${err.message?.slice(0, 150)}`);
+
+        // Only retry if the error is retryable and there are more providers to try
+        if (!isRetryableError(err)) {
+          break; // Non-retryable error (e.g. bad request) — don't try other providers
+        }
+        // Continue to next provider in chain
       }
-    } catch (err: any) {
-      responseText = `❌ Error: ${err.message || "Failed to generate response"}`;
+    }
+
+    if (lastError) {
+      responseText = `❌ Error: ${lastError.message || "Failed to generate response"}`;
       await ctx.runMutation(api.messages.appendToMessage, {
         messageId: streamingMessageId,
         text: responseText,
@@ -181,8 +233,8 @@ export const respondToMessage = action({
       toolCalls: collectedToolCalls.length > 0 ? collectedToolCalls : undefined,
       inputTokens: tokenUsage.inputTokens || undefined,
       outputTokens: tokenUsage.outputTokens || undefined,
-      model,
-      provider,
+      model: usedModel,
+      provider: usedProvider,
     });
   },
 });
