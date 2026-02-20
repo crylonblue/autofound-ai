@@ -8,9 +8,21 @@ import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import type { Doc, Id } from "../../../../convex/_generated/dataModel";
 import { SKILL_PACKS, ALL_SKILL_KEYS, DEFAULT_SKILLS, type SkillPackKey } from "../../../lib/skillPacks";
+import { estimateCost, formatTokens, formatCost } from "../../../lib/tokenCost";
 
 function useClerkUser() {
   return useUser();
+}
+
+function AgentCostBadge({ agentId, clerkId }: { agentId: Id<"agents">; clerkId: string }) {
+  const usage = useQuery(api.messages.getUsageByAgent, clerkId ? { agentId, clerkId } : "skip");
+  if (!usage || usage.totalTokens === 0) return null;
+  const cost = estimateCost(usage.totalInputTokens, usage.totalOutputTokens, usage.lastModel, usage.lastProvider);
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] text-zinc-500">
+      ⚡ {formatTokens(usage.totalTokens)} · ~{formatCost(cost)}
+    </span>
+  );
 }
 
 const templates = [
@@ -254,6 +266,7 @@ export default function AgentsPage() {
               <span className="text-xs text-zinc-400 capitalize">{agent.status}</span>
               <span className="text-xs text-zinc-600">·</span>
               <span className="text-xs text-zinc-500">{MODELS.find(m => m.value === agent.model)?.label ?? agent.model ?? "Default"}</span>
+              {clerkId && <AgentCostBadge agentId={agent._id} clerkId={clerkId} />}
             </div>
             <p className="text-xs text-zinc-500 line-clamp-2 mb-3">{agent.systemPrompt}</p>
             {/* Heartbeat status */}

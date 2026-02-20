@@ -8,6 +8,7 @@ import { ArrowLeft, Send, Trash2, Loader2, Info, Zap } from "lucide-react";
 import { api } from "../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
 import MarkdownMessage from "../../../../../components/MarkdownMessage";
+import { estimateCost, formatTokens, formatCost } from "../../../../../lib/tokenCost";
 // TODO: Integrate AgentRunViewer when messages support runId field
 // import AgentRunViewer from "../../../../components/AgentRunViewer";
 
@@ -106,6 +107,14 @@ export default function ChatPage() {
             <h2 className="font-semibold text-sm truncate">{agent.name}</h2>
             <p className="text-xs text-zinc-500">{agent.role}</p>
           </div>
+          {usageStats && usageStats.totalTokens > 0 && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/[0.05] rounded-lg text-xs text-zinc-400">
+              <Zap className="w-3 h-3 text-amber-400" />
+              <span>{formatTokens(usageStats.totalTokens)} tokens</span>
+              <span className="text-zinc-600">·</span>
+              <span>~{formatCost(estimateCost(usageStats.totalInputTokens, usageStats.totalOutputTokens, agent.model || undefined))}</span>
+            </div>
+          )}
           <button
             onClick={() => setShowSidebar(!showSidebar)}
             className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
@@ -271,6 +280,10 @@ export default function ChatPage() {
                   <div className="flex justify-between pt-1 border-t border-white/10 font-medium">
                     <span className="text-zinc-400">Total</span>
                     <span>{usageStats.totalTokens.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between pt-1 border-t border-white/10 font-medium text-amber-400">
+                    <span className="text-zinc-400">Est. Cost</span>
+                    <span>~{formatCost(estimateCost(usageStats.totalInputTokens, usageStats.totalOutputTokens, agent.model || undefined))}</span>
                   </div>
                 </div>
               </div>

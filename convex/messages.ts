@@ -158,6 +158,43 @@ export const getUsageStats = query({
   },
 });
 
+export const getUsageByAgent = query({
+  args: {
+    clerkId: v.string(),
+    agentId: v.id("agents"),
+  },
+  handler: async (ctx, args) => {
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_agent_and_user", (q) =>
+        q.eq("agentId", args.agentId).eq("clerkId", args.clerkId)
+      )
+      .collect();
+
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let lastModel: string | undefined;
+    let lastProvider: string | undefined;
+
+    for (const msg of messages) {
+      if (msg.inputTokens || msg.outputTokens) {
+        totalInputTokens += msg.inputTokens || 0;
+        totalOutputTokens += msg.outputTokens || 0;
+        if (msg.model) lastModel = msg.model;
+        if (msg.provider) lastProvider = msg.provider;
+      }
+    }
+
+    return {
+      totalInputTokens,
+      totalOutputTokens,
+      totalTokens: totalInputTokens + totalOutputTokens,
+      lastModel,
+      lastProvider,
+    };
+  },
+});
+
 export const clearHistory = mutation({
   args: {
     agentId: v.id("agents"),
