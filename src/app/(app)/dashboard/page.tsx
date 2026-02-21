@@ -10,11 +10,13 @@ import {
   ArrowRight,
   GitBranchPlus,
   Loader2,
+  Coins,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import OnboardingChecklist from "../../components/OnboardingChecklist";
+import { estimateCost, formatTokens, formatCost } from "../../../lib/tokenCost";
 
 function useClerkUser() {
   return useUser();
@@ -34,6 +36,7 @@ export default function DashboardPage() {
 
   const agents = useQuery(api.agents.listAgentsByClerk, clerkId ? { clerkId } : "skip");
   const tasks = useQuery(api.tasks.listTasksWithAgents, clerkId ? { clerkId } : "skip");
+  const usage = useQuery(api.messages.getUsageAllAgents, clerkId ? { clerkId } : "skip");
 
   if (!isLoaded) {
     return <div className="p-8 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-zinc-400" /></div>;
@@ -73,10 +76,10 @@ export default function DashboardPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Active Agents", value: activeAgents.length, icon: Users, color: "text-blue-400" },
-          { label: "Total Tasks", value: tasks?.length ?? 0, icon: ListTodo, color: "text-emerald-400" },
-          { label: "Completed", value: completedTasks.length, icon: Zap, color: "text-purple-400" },
-          { label: "Pending", value: pendingTasks.length, icon: Activity, color: "text-amber-400" },
+          { label: "Active Agents", value: String(activeAgents.length), icon: Users, color: "text-blue-400" },
+          { label: "Total Tasks", value: String(tasks?.length ?? 0), icon: ListTodo, color: "text-emerald-400" },
+          { label: "Tokens Used", value: usage ? formatTokens(usage.totalTokens) : "—", icon: Zap, color: "text-purple-400" },
+          { label: "Est. Cost", value: usage ? formatCost(estimateCost(usage.totalInputTokens, usage.totalOutputTokens)) : "—", icon: Coins, color: "text-amber-400" },
         ].map((stat) => (
           <div key={stat.label} className="bg-white/[0.03] border border-white/10 rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
@@ -153,6 +156,33 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* Usage by Agent */}
+          {usage && usage.agents.length > 0 && (
+            <div className="bg-white/[0.03] border border-white/10 rounded-xl">
+              <div className="p-5 border-b border-white/10">
+                <h2 className="font-semibold flex items-center gap-2">
+                  <Coins className="w-4 h-4 text-amber-400" />
+                  Usage by Agent
+                </h2>
+              </div>
+              <div className="divide-y divide-white/5">
+                {usage.agents
+                  .sort((a, b) => b.totalTokens - a.totalTokens)
+                  .map((agent) => (
+                    <div key={agent.agentId} className="flex items-center gap-3 p-4">
+                      <span className="text-xl">{agent.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{agent.name}</p>
+                        <p className="text-xs text-zinc-500">
+                          {formatTokens(agent.totalTokens)} tokens · {formatCost(estimateCost(agent.inputTokens, agent.outputTokens, agent.lastModel, agent.lastProvider))}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
 
           {/* Quick Actions */}
           <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5">
