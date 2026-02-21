@@ -4,7 +4,6 @@ import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { encrypt, decrypt } from "./crypto";
-import type { Id } from "./_generated/dataModel";
 
 // Send a Telegram message using the agent's own bot token
 export const sendTelegramMessage = action({
@@ -23,22 +22,30 @@ export const sendTelegramMessage = action({
 });
 
 async function sendWithToken(token: string, chatId: string, text: string) {
-  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "Markdown" }),
-  });
-  if (!res.ok) {
-    const errText = await res.text();
-    if (errText.includes("can't parse")) {
-      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chatId, text }),
-      });
-      return;
+  // Telegram has a 4096 char limit per message — split if needed
+  const chunks = [];
+  for (let i = 0; i < text.length; i += 4000) {
+    chunks.push(text.slice(i, i + 4000));
+  }
+  for (const chunk of chunks) {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text: chunk, parse_mode: "Markdown" }),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      // Markdown parse failure — retry without parse_mode
+      if (errText.includes("can't parse")) {
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: chatId, text: chunk }),
+        });
+        continue;
+      }
+      throw new Error(`Telegram API error: ${res.status} ${errText.slice(0, 200)}`);
     }
-    throw new Error(`Telegram API error: ${res.status} ${errText.slice(0, 200)}`);
   }
 }
 
@@ -94,7 +101,7 @@ export const unregisterWebhook = action({
   },
 });
 
-// Handle incoming Telegram message for a specific agent
+// Handle incoming Telegram message — store it and let chatRunner reply via callback
 export const handleTelegramMessage = action({
   args: {
     agentId: v.id("agents"),
@@ -103,82 +110,37 @@ export const handleTelegramMessage = action({
   },
   handler: async (ctx, args) => {
     const agent = await ctx.runQuery(internal.telegram.getAgentForWebhook, { agentId: args.agentId });
-    if (!agent) {
-      return; // agent deleted, ignore
-    }
+    if (!agent) return; // agent deleted
 
     const user = await ctx.runQuery(api.users.getUserById, { userId: agent.userId });
     if (!user) return;
 
-    // Store telegram chat ID on agent if not set
+    // Save telegramChatId on agent if not set (for future lookups)
     if (agent.telegramChatId !== args.chatId) {
-      // We can't patch directly from action, but the chatId is used for lookups
-      // For now we proceed without updating — the webhook URL already identifies the agent
+      await ctx.runMutation(api.telegram.saveChatId, {
+        agentId: args.agentId,
+        chatId: args.chatId,
+      });
     }
 
     // Send typing indicator
-    const botToken = agent.telegramBotToken ? decrypt(agent.telegramBotToken) : null;
-    async function sendTyping() {
-      if (!botToken) return;
-      await fetch(`https://api.telegram.org/bot${botToken}/sendChatAction`, {
+    if (agent.telegramBotToken) {
+      const token = decrypt(agent.telegramBotToken);
+      await fetch(`https://api.telegram.org/bot${token}/sendChatAction`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_id: args.chatId, action: "typing" }),
       }).catch(() => {});
     }
 
-    await sendTyping();
-
-    // Store user message
+    // Store user message — this triggers chatRunner.respondToMessage via scheduler
+    // Pass telegramChatId so chatRunner sends the reply back to Telegram directly
     await ctx.runMutation(api.messages.send, {
       agentId: agent._id,
       clerkId: user.clerkId,
       content: args.text,
       source: "telegram",
-    });
-
-    // Poll for agent response (send typing every 5s)
-    const startTime = Date.now();
-    const timeout = 120_000;
-    let lastTyping = Date.now();
-
-    const initialMsgs = await ctx.runQuery(api.messages.list, {
-      agentId: agent._id,
-      clerkId: user.clerkId,
-    });
-    const initialCount = initialMsgs.length;
-
-    while (Date.now() - startTime < timeout) {
-      await new Promise((r) => setTimeout(r, 2000));
-
-      // Refresh typing indicator every 5s
-      if (Date.now() - lastTyping > 4500) {
-        await sendTyping();
-        lastTyping = Date.now();
-      }
-
-      const msgs = await ctx.runQuery(api.messages.list, {
-        agentId: agent._id,
-        clerkId: user.clerkId,
-      });
-
-      if (msgs.length > initialCount) {
-        const lastMsg = msgs[msgs.length - 1];
-        if (lastMsg.role === "agent" && !lastMsg.streaming && lastMsg.content) {
-          await ctx.runAction(api.telegramActions.sendTelegramMessage, {
-            agentId: args.agentId,
-            chatId: args.chatId,
-            text: lastMsg.content,
-          });
-          return;
-        }
-      }
-    }
-
-    await ctx.runAction(api.telegramActions.sendTelegramMessage, {
-      agentId: args.agentId,
-      chatId: args.chatId,
-      text: "⏱ Response timed out. The agent may still be processing.",
+      telegramChatId: args.chatId,
     });
   },
 });

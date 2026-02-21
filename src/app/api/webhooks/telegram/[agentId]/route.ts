@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../../../convex/_generated/api";
+import type { Id } from "../../../../../../convex/_generated/dataModel";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
@@ -17,11 +18,18 @@ export async function POST(
     const chatId = String(message.chat.id);
     const text = message.text.trim();
 
+    // Validate agentId looks like a Convex ID (basic sanity check)
+    if (!agentId || agentId.length < 10) {
+      console.error("Invalid agentId in Telegram webhook:", agentId);
+      return NextResponse.json({ ok: true });
+    }
+
+    const typedAgentId = agentId as Id<"agents">;
+
     if (text === "/start") {
-      // Send welcome via the agent's own bot token
       convex
         .action(api.telegramActions.sendTelegramMessage, {
-          agentId: agentId as any,
+          agentId: typedAgentId,
           chatId,
           text: "👋 Welcome! Send me a message and I'll respond as your AI agent.",
         })
@@ -30,9 +38,10 @@ export async function POST(
     }
 
     // Handle regular message — fire and forget
+    // chatRunner will send the reply back to Telegram via callback
     convex
       .action(api.telegramActions.handleTelegramMessage, {
-        agentId: agentId as any,
+        agentId: typedAgentId,
         chatId,
         text,
       })

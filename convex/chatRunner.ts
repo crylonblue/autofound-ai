@@ -107,6 +107,7 @@ export const respondToMessage = action({
   args: {
     agentId: v.id("agents"),
     clerkId: v.string(),
+    telegramChatId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const agent = await ctx.runQuery(api.agents.getAgent, { agentId: args.agentId });
@@ -236,6 +237,19 @@ export const respondToMessage = action({
       model: usedModel,
       provider: usedProvider,
     });
+
+    // If triggered from Telegram, send the response back
+    if (args.telegramChatId && responseText && agent.telegramBotToken) {
+      try {
+        await ctx.runAction(api.telegramActions.sendTelegramMessage, {
+          agentId: args.agentId,
+          chatId: args.telegramChatId,
+          text: responseText,
+        });
+      } catch (err: any) {
+        console.error("[telegram] Failed to send reply:", err.message?.slice(0, 150));
+      }
+    }
   },
 });
 

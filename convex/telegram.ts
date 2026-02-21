@@ -36,6 +36,19 @@ export const getAgentForWebhook = internalQuery({
   },
 });
 
+// Save telegram chat ID on agent
+export const saveChatId = mutation({
+  args: {
+    agentId: v.id("agents"),
+    chatId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.agentId, {
+      telegramChatId: args.chatId,
+    });
+  },
+});
+
 // Get agent by telegram chat ID (still useful for lookups)
 export const getAgentByChatId = internalQuery({
   args: { chatId: v.string() },
