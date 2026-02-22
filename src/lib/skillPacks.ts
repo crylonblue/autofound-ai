@@ -24,6 +24,11 @@ export const SKILL_PACKS = {
     description: "Execute JavaScript code for calculations and data processing",
     icon: "🖥️",
   },
+  "pod-compute": {
+    name: "Pod Compute",
+    description: "Execute shell commands and manage files on a persistent Linux pod",
+    icon: "🐳",
+  },
 } as const;
 
 export type SkillPackKey = keyof typeof SKILL_PACKS;
