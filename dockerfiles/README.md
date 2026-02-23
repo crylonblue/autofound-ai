@@ -8,6 +8,7 @@ Base images for autofound.ai agent execution on Fly.io Machines.
 |-------|----------|---------|-------|
 | `autofound-base` | Ubuntu 24.04 | All agents — Python 3.12, Node 22, git | ~350MB |
 | `autofound-dev` | base | Coding agents — build-essential, gcc | ~500MB |
+| `autofound-pod` | base | Pod server — Fastify on :8080, /exec, /files | ~380MB |
 | `autofound-marketer` | base | Marketing agents — Playwright, pandas | ~700MB |
 
 ## Build

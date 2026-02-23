@@ -1,0 +1,24 @@
+# autofound.ai — Pod Server Image
+# Extends base with the pod server (Fastify on :8080)
+# Each agent gets one of these as their persistent machine.
+
+FROM autofound-base:latest
+
+USER agent
+WORKDIR /home/agent
+
+# Copy pod server
+COPY --chown=agent:agent pod-server/ /home/agent/pod-server/
+
+# Install dependencies
+RUN cd /home/agent/pod-server && npm install --production
+
+# Create workspace dir
+RUN mkdir -p /home/agent/workspace
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+CMD ["node", "/home/agent/pod-server/server.js"]
