@@ -16,6 +16,7 @@ import { useQuery } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../../convex/_generated/api";
 import OnboardingChecklist from "../../components/OnboardingChecklist";
+import ActivityFeed from "../../components/ActivityFeed";
 import { estimateCost, formatTokens, formatCost } from "../../../lib/tokenCost";
 
 function useClerkUser() {
@@ -92,38 +93,18 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Tasks */}
+        {/* Activity Feed */}
         <div className="lg:col-span-2 bg-white/[0.03] border border-white/10 rounded-xl">
           <div className="flex items-center justify-between p-5 border-b border-white/10">
             <h2 className="font-semibold flex items-center gap-2">
               <Activity className="w-4 h-4 text-blue-400" />
-              Recent Tasks
+              Activity Feed
             </h2>
-            <Link href="/tasks" className="text-xs text-blue-400 hover:text-blue-300">View all</Link>
+            <span className="text-[10px] text-zinc-600 uppercase tracking-wider">Live</span>
           </div>
-          {recentTasks.length === 0 ? (
-            <div className="p-8 text-center text-zinc-500 text-sm">
-              No tasks yet. <Link href="/tasks" className="text-blue-400 hover:underline">Create one</Link>
-            </div>
-          ) : (
-            <div className="divide-y divide-white/5">
-              {recentTasks.map((task) => {
-                const sc = statusColors[task.status] ?? statusColors.pending;
-                return (
-                  <div key={task._id} className="flex items-start gap-3 p-4 hover:bg-white/[0.02] transition-colors">
-                    <span className="text-xl mt-0.5">{task.agentIcon}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{task.title}</p>
-                      <p className="text-xs text-zinc-500 mt-1">{task.agentName} · {new Date(task.createdAt).toLocaleString()}</p>
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${sc.bg} ${sc.color} capitalize`}>
-                      {task.status.replace("_", " ")}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <div className="p-4">
+            <ActivityFeed compact limit={15} />
+          </div>
         </div>
 
         {/* Right column */}

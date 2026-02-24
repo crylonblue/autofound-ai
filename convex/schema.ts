@@ -149,6 +149,30 @@ export default defineSchema({
     runCount: v.number(),
   }).index("by_agent", ["agentId"]).index("by_clerk_id", ["clerkId"]),
 
+  // Agent activity feed
+  activities: defineTable({
+    userId: v.id("users"),
+    agentId: v.id("agents"),
+    type: v.union(
+      v.literal("heartbeat_complete"),
+      v.literal("task_complete"),
+      v.literal("task_failed"),
+      v.literal("chat_response"),
+      v.literal("proactive_action"),
+      v.literal("error")
+    ),
+    summary: v.string(),
+    metadata: v.optional(v.object({
+      taskId: v.optional(v.string()),
+      messageId: v.optional(v.string()),
+      error: v.optional(v.string()),
+      tokensUsed: v.optional(v.number()),
+    })),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"])
+    .index("by_agent", ["agentId"])
+    .index("by_user_time", ["userId", "createdAt"]),
+
   // Org chart node positions (persisted layout)
   orgNodePositions: defineTable({
     userId: v.id("users"),

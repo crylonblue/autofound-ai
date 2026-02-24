@@ -2,7 +2,7 @@
 
 import { v } from "convex/values";
 import { action } from "./_generated/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { decrypt } from "./crypto";
 import { ToolDefinition } from "./tools/types";
 import { getEnabledTools, executeToolFromList } from "./tools/index";
@@ -237,6 +237,24 @@ export const respondToMessage = action({
       model: usedModel,
       provider: usedProvider,
     });
+
+    // Log activity
+    try {
+      const actUser = await ctx.runQuery(api.users.getUser, { clerkId: args.clerkId });
+      if (actUser) {
+        await ctx.runMutation(internal.activities.log, {
+          userId: actUser._id,
+          agentId: args.agentId,
+          type: lastError ? "error" : "chat_response",
+          summary: lastError
+            ? `Error responding: ${lastError.message?.slice(0, 100)}`
+            : `Replied to chat (${(tokenUsage.inputTokens || 0) + (tokenUsage.outputTokens || 0)} tokens)`,
+          metadata: {
+            tokensUsed: (tokenUsage.inputTokens || 0) + (tokenUsage.outputTokens || 0),
+          },
+        });
+      }
+    } catch { /* non-critical */ }
 
     // If triggered from Telegram, send the response back
     if (args.telegramChatId && responseText && agent.telegramBotToken) {

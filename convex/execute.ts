@@ -69,6 +69,16 @@ export const executeTask = action({
         status: "completed",
         output,
       });
+
+      // Log activity
+      await ctx.runMutation(internal.activities.log, {
+        userId: user._id,
+        agentId: task.agentId,
+        type: "task_complete",
+        summary: `Completed: ${task.title}`,
+        metadata: { taskId: args.taskId },
+      });
+
       return { success: true, output };
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -77,6 +87,16 @@ export const executeTask = action({
         status: "failed",
         output: `Error: ${msg}`,
       });
+
+      // Log failure
+      await ctx.runMutation(internal.activities.log, {
+        userId: user._id,
+        agentId: task.agentId,
+        type: "task_failed",
+        summary: `Failed: ${task.title}`,
+        metadata: { taskId: args.taskId, error: msg.slice(0, 200) },
+      });
+
       return { success: false, output: msg };
     }
   },

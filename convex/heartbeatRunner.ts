@@ -211,6 +211,24 @@ Be concise. Focus on action, not narration.`;
           toolCalls: result.toolCalls.length > 0 ? result.toolCalls : undefined,
         });
       }
+
+      // Log heartbeat activity
+      try {
+        const hbUser = await ctx.runQuery(api.users.getUser, { clerkId: args.clerkId });
+        if (hbUser) {
+          await ctx.runMutation(internal.activities.log, {
+            userId: hbUser._id,
+            agentId: args.agentId,
+            type: isIdle ? "heartbeat_complete" : "proactive_action",
+            summary: isIdle
+              ? "Heartbeat — all clear"
+              : `Heartbeat: ${result.text.slice(0, 150)}`,
+            metadata: {
+              tokensUsed: (result.usage?.inputTokens || 0) + (result.usage?.outputTokens || 0),
+            },
+          });
+        }
+      } catch { /* non-critical */ }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       await ctx.runMutation(api.heartbeats.recordHeartbeat, {
