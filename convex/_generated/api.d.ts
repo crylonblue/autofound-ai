@@ -8,9 +8,12 @@
  * @module
  */
 
+import type * as activities from "../activities.js";
 import type * as agentRuns from "../agentRuns.js";
 import type * as agents from "../agents.js";
 import type * as chatRunner from "../chatRunner.js";
+import type * as cleanup from "../cleanup.js";
+import type * as cleanupQueries from "../cleanupQueries.js";
 import type * as crons from "../crons.js";
 import type * as crypto from "../crypto.js";
 import type * as execute from "../execute.js";
@@ -23,6 +26,7 @@ import type * as orgChart from "../orgChart.js";
 import type * as podManager from "../podManager.js";
 import type * as podMutations from "../podMutations.js";
 import type * as r2 from "../r2.js";
+import type * as rateLimit from "../rateLimit.js";
 import type * as tasks from "../tasks.js";
 import type * as telegram from "../telegram.js";
 import type * as telegramActions from "../telegramActions.js";
@@ -45,9 +49,12 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  activities: typeof activities;
   agentRuns: typeof agentRuns;
   agents: typeof agents;
   chatRunner: typeof chatRunner;
+  cleanup: typeof cleanup;
+  cleanupQueries: typeof cleanupQueries;
   crons: typeof crons;
   crypto: typeof crypto;
   execute: typeof execute;
@@ -60,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   podManager: typeof podManager;
   podMutations: typeof podMutations;
   r2: typeof r2;
+  rateLimit: typeof rateLimit;
   tasks: typeof tasks;
   telegram: typeof telegram;
   telegramActions: typeof telegramActions;

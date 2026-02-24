@@ -22,6 +22,12 @@ export const startAgentRun = action({
     const user = await ctx.runQuery(api.users.getUser, { clerkId: args.clerkId });
     if (!user) throw new Error("User not found");
 
+    // Check rate limit
+    const rateLimit = await ctx.runQuery(internal.rateLimit.checkRateLimit, { userId: user._id });
+    if (!rateLimit.allowed) {
+      throw new Error(rateLimit.reason || "Rate limit exceeded");
+    }
+
     // Check BYOK key exists
     const model = agent.model || "gpt-4o-mini";
     let provider: string;
@@ -92,14 +98,24 @@ export const startAgentRun = action({
         region: "fra",
       };
 
-      const res = await fetch(`${FLY_API_BASE}/apps/${flyApp}/machines`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${flyToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(machineConfig),
-      });
+      const flyFetch = async (attempt: number): Promise<Response> => {
+        const res = await fetch(`${FLY_API_BASE}/apps/${flyApp}/machines`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${flyToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(machineConfig),
+        });
+        // Retry once on 5xx
+        if (!res.ok && res.status >= 500 && attempt < 1) {
+          await new Promise((r) => setTimeout(r, 2000));
+          return flyFetch(attempt + 1);
+        }
+        return res;
+      };
+
+      const res = await flyFetch(0);
 
       if (!res.ok) {
         const errText = await res.text();

@@ -9,4 +9,10 @@ crons.interval(
   internal.heartbeatScheduler.runAllHeartbeats,
 );
 
+crons.interval(
+  "cleanup stale runs",
+  { minutes: 15 },
+  internal.cleanup.cleanupStaleRuns,
+);
+
 export default crons;

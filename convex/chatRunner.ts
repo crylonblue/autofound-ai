@@ -178,52 +178,77 @@ export const respondToMessage = action({
     let tokenUsage: TokenUsage = { inputTokens: 0, outputTokens: 0 };
     let usedProvider: "openai" | "anthropic" | "google" = failoverChain[0].provider;
     let usedModel: string = failoverChain[0].model;
+    let timedOut = false;
 
-    // Try each provider in the failover chain
-    let lastError: Error | null = null;
-    for (const config of failoverChain) {
-      try {
-        // Reset stream buffer for retry attempts
-        streamCallback.reset();
+    const RESPONSE_TIMEOUT_MS = 300_000; // 5 minutes
 
-        let result: LoopResult;
-        if (config.provider === "openai") {
-          result = await runOpenAIStreamingLoop(config.apiKey, config.model, enhancedSystemPrompt, chatHistory, tools, streamCallback);
-        } else if (config.provider === "anthropic") {
-          result = await runAnthropicStreamingLoop(config.apiKey, config.model, enhancedSystemPrompt, chatHistory, tools, streamCallback);
-        } else {
-          result = await runGoogleLoop(config.apiKey, config.model, enhancedSystemPrompt, chatHistory, tools);
-          await ctx.runMutation(api.messages.appendToMessage, {
-            messageId: streamingMessageId,
-            text: result.text,
-          });
+    const llmWork = async () => {
+      // Try each provider in the failover chain
+      let lastError: Error | null = null;
+      for (const config of failoverChain) {
+        try {
+          // Reset stream buffer for retry attempts
+          streamCallback.reset();
+
+          let result: LoopResult;
+          if (config.provider === "openai") {
+            result = await runOpenAIStreamingLoop(config.apiKey, config.model, enhancedSystemPrompt, chatHistory, tools, streamCallback);
+          } else if (config.provider === "anthropic") {
+            result = await runAnthropicStreamingLoop(config.apiKey, config.model, enhancedSystemPrompt, chatHistory, tools, streamCallback);
+          } else {
+            result = await runGoogleLoop(config.apiKey, config.model, enhancedSystemPrompt, chatHistory, tools);
+            await ctx.runMutation(api.messages.appendToMessage, {
+              messageId: streamingMessageId,
+              text: result.text,
+            });
+          }
+
+          responseText = result.text;
+          collectedToolCalls.push(...result.toolCalls);
+          tokenUsage = result.usage;
+          usedProvider = config.provider;
+          usedModel = config.model;
+          lastError = null;
+          break; // Success — stop trying
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`[failover] ${config.provider}/${config.model} failed: ${err.message?.slice(0, 150)}`);
+
+          // Only retry if the error is retryable and there are more providers to try
+          if (!isRetryableError(err)) {
+            break; // Non-retryable error (e.g. bad request) — don't try other providers
+          }
+          // Continue to next provider in chain
         }
-
-        responseText = result.text;
-        collectedToolCalls.push(...result.toolCalls);
-        tokenUsage = result.usage;
-        usedProvider = config.provider;
-        usedModel = config.model;
-        lastError = null;
-        break; // Success — stop trying
-      } catch (err: any) {
-        lastError = err;
-        console.warn(`[failover] ${config.provider}/${config.model} failed: ${err.message?.slice(0, 150)}`);
-
-        // Only retry if the error is retryable and there are more providers to try
-        if (!isRetryableError(err)) {
-          break; // Non-retryable error (e.g. bad request) — don't try other providers
-        }
-        // Continue to next provider in chain
       }
-    }
 
-    if (lastError) {
-      responseText = `❌ Error: ${lastError.message || "Failed to generate response"}`;
-      await ctx.runMutation(api.messages.appendToMessage, {
-        messageId: streamingMessageId,
-        text: responseText,
-      });
+      if (lastError) {
+        responseText = `❌ Error: ${lastError.message || "Failed to generate response"}`;
+        await ctx.runMutation(api.messages.appendToMessage, {
+          messageId: streamingMessageId,
+          text: responseText,
+        });
+      }
+    };
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("RESPONSE_TIMEOUT")), RESPONSE_TIMEOUT_MS)
+    );
+
+    try {
+      await Promise.race([llmWork(), timeoutPromise]);
+    } catch (err: any) {
+      if (err?.message === "RESPONSE_TIMEOUT") {
+        timedOut = true;
+        responseText = "⏱️ Response timed out after 5 minutes.";
+        await streamCallback.flush();
+        await ctx.runMutation(api.messages.appendToMessage, {
+          messageId: streamingMessageId,
+          text: "\n\n⏱️ Response timed out after 5 minutes.",
+        });
+      } else {
+        throw err;
+      }
     }
 
     // Flush any remaining buffered text
@@ -245,9 +270,11 @@ export const respondToMessage = action({
         await ctx.runMutation(internal.activities.log, {
           userId: actUser._id,
           agentId: args.agentId,
-          type: lastError ? "error" : "chat_response",
-          summary: lastError
-            ? `Error responding: ${lastError.message?.slice(0, 100)}`
+          type: timedOut ? "error" : (responseText.startsWith("❌") ? "error" : "chat_response"),
+          summary: timedOut
+            ? "Response timed out after 5 minutes"
+            : responseText.startsWith("❌")
+            ? `Error responding: ${responseText.slice(0, 100)}`
             : `Replied to chat (${(tokenUsage.inputTokens || 0) + (tokenUsage.outputTokens || 0)} tokens)`,
           metadata: {
             tokensUsed: (tokenUsage.inputTokens || 0) + (tokenUsage.outputTokens || 0),
@@ -310,7 +337,13 @@ function googleToolDefs(tools: ToolDefinition[]) {
 }
 
 async function executeTool(name: string, args: any, tools: ToolDefinition[]): Promise<string> {
-  return executeToolFromList(name, args, tools);
+  try {
+    return await executeToolFromList(name, args, tools);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[tool] ${name} failed: ${msg}`);
+    return `Error executing tool "${name}": ${msg}`;
+  }
 }
 
 // ─── Streaming helpers ───
