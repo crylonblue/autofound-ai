@@ -173,6 +173,69 @@ export default defineSchema({
     .index("by_agent", ["agentId"])
     .index("by_user_time", ["userId", "createdAt"]),
 
+  // ─── GTM Lead Sourcing ───────────────────────────────────
+
+  // GTM campaigns (a campaign = a goal + team of agents)
+  campaigns: defineTable({
+    sessionId: v.string(),              // Anonymous session (no auth required)
+    userId: v.optional(v.id("users")),  // Optional: linked if user is logged in
+    name: v.string(),
+    goal: v.string(),                   // Free-text GTM goal / ICP description
+    status: v.union(
+      v.literal("active"),
+      v.literal("paused"),
+      v.literal("completed")
+    ),
+    totalLeads: v.optional(v.number()),
+    createdAt: v.number(),
+  }).index("by_session", ["sessionId"])
+    .index("by_user", ["userId"]),
+
+  // Leads found by agents
+  leads: defineTable({
+    campaignId: v.id("campaigns"),
+    agentId: v.optional(v.id("agents")),  // Which agent found this lead
+    sessionId: v.string(),
+    name: v.string(),
+    title: v.optional(v.string()),
+    company: v.string(),
+    website: v.optional(v.string()),
+    linkedin: v.optional(v.string()),
+    email: v.optional(v.string()),
+    score: v.number(),                    // 0-100 ICP fit score
+    reason: v.string(),                   // One-line score explanation
+    source: v.optional(v.string()),       // URL where found
+    enrichmentData: v.optional(v.string()), // JSON: company size, funding, tech stack
+    status: v.union(
+      v.literal("new"),
+      v.literal("approved"),
+      v.literal("rejected"),
+      v.literal("exported")
+    ),
+    foundAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+  }).index("by_campaign", ["campaignId"])
+    .index("by_session", ["sessionId"])
+    .index("by_agent", ["agentId"]),
+
+  // Artifacts produced by agents (reports, analyses, email drafts)
+  artifacts: defineTable({
+    campaignId: v.id("campaigns"),
+    agentId: v.optional(v.id("agents")),
+    sessionId: v.string(),
+    title: v.string(),
+    content: v.string(),                  // Markdown content
+    type: v.union(
+      v.literal("report"),
+      v.literal("email_draft"),
+      v.literal("analysis"),
+      v.literal("strategy"),
+      v.literal("other")
+    ),
+    createdAt: v.number(),
+  }).index("by_campaign", ["campaignId"])
+    .index("by_session", ["sessionId"]),
+
   // Org chart node positions (persisted layout)
   orgNodePositions: defineTable({
     userId: v.id("users"),
