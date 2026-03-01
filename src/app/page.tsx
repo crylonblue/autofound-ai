@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import LazyAgentModel from "./components/LazyAgentModel";
 import TerminalDemo from "./components/TerminalDemo";
 
 /* ───────────────────────── components ───────────────────────── */
-
 
 function CTAButtons({ className = "", center = false }: { className?: string; center?: boolean }) {
   return (
@@ -15,7 +13,7 @@ function CTAButtons({ className = "", center = false }: { className?: string; ce
         href="/sign-up"
         className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition"
       >
-        Get started free
+        Start Finding Leads
       </Link>
       <Link
         href="/sign-in"
@@ -28,12 +26,12 @@ function CTAButtons({ className = "", center = false }: { className?: string; ce
 }
 
 const faqs = [
-  { q: "How does Bring Your Own Key (BYOK) work?", a: "You connect your own AI provider API keys. Your usage, your costs, full control." },
-  { q: "What AI models are supported?", a: "OpenAI, Anthropic Claude, Google Gemini, Mistral, Llama, and 100+ more via standard APIs." },
-  { q: "Can I customize agent roles?", a: "Yes, every agent template is fully customizable. Edit system prompts, tools, permissions, and communication rules." },
-  { q: "Is my data private?", a: "Absolutely. With BYOK, data flows directly between you and your AI provider. We never see your prompts or outputs." },
-  { q: "Can agents communicate with each other?", a: "Yes, agents can delegate tasks, request approvals, and escalate issues based on your team structure." },
-  { q: "What happens if an agent makes a mistake?", a: "All critical actions require human approval gates. You set the rules for what needs sign-off." },
+  { q: "How do the AI agents find leads?", a: "Our agents scour public data sources — LinkedIn, company databases, news, job boards, funding announcements, and more — to find prospects matching your ideal customer profile." },
+  { q: "How accurate are the leads?", a: "Every lead is verified and enriched with contact info, company data, and relevance scoring. Typical accuracy is 90%+ for email and 85%+ for direct phone." },
+  { q: "Can I integrate with my CRM?", a: "Yes — Pro and Scale plans support direct integrations with Salesforce, HubSpot, Pipedrive, and any CRM with an API." },
+  { q: "What makes this different from a lead database?", a: "Databases give you static lists. Our AI agents actively research, qualify, and score leads based on your specific ICP — and they get smarter over time." },
+  { q: "Is my data private?", a: "Absolutely. Your ICP criteria and lead lists are encrypted and never shared. We never sell your data." },
+  { q: "Can I customize the outreach messaging?", a: "Yes — the Outreach Writer agent generates personalized emails and sequences based on each prospect's context. You approve before anything sends." },
 ];
 
 function FAQItem({ q, a }: { q: string; a: string }) {
@@ -75,44 +73,40 @@ function FAQSection() {
 const steps = [
   {
     n: "01",
-    title: "Hire agent templates",
-    desc: "Browse a library of pre-built roles — CEO, Marketing, Sales, Finance, Engineering, Support. Each comes with tools, prompts, and default behaviors.",
+    title: "Describe your ideal customer",
+    desc: "Tell us your ICP — industry, company size, role, tech stack, funding stage. The more specific, the better your leads.",
   },
   {
     n: "02",
-    title: "Define your team structure",
-    desc: "Set up roles, communication channels, escalation paths, and approval gates for your AI workforce.",
+    title: "AI agents search & qualify",
+    desc: "Our agents scour LinkedIn, company databases, news, and funding data to find and score prospects that match your criteria.",
   },
   {
     n: "03",
-    title: "Let them work",
-    desc: "Agents execute real tasks — write content, research leads, manage expenses, deploy code. Not advice. Actual output.",
+    title: "Qualified leads delivered",
+    desc: "Receive enriched leads with verified emails, company context, and personalized outreach drafts — ready for your sales team.",
   },
 ];
 
 const agents = [
-  { emoji: "👔", role: "CEO Agent", desc: "Reviews reports, sets priorities, delegates across departments.", task: "\"Summarize this week's KPIs and assign Q2 OKRs.\"", image: "/models/agent-ceo.png", model: "/models/ceo.glb" },
-  { emoji: "💻", role: "Dev Agent", desc: "Writes code, runs tests, deploys to staging or production.", task: "\"Fix the auth bug in PR #42 and deploy to staging.\"", image: "/models/agent-dev.png", model: "/models/dev.glb" },
-  { emoji: "📣", role: "Marketing Agent", desc: "Runs campaigns, tracks analytics, optimizes funnels and content.", task: "\"Launch the Q1 email campaign and report open rates.\"", image: "/models/agent-marketing.png", model: "/models/marketing.glb" },
-  { emoji: "🤝", role: "Sales Agent", desc: "Qualifies leads, sends proposals, follows up on deals.", task: "\"Follow up with the 12 warm leads from last week.\"", image: "/models/agent-sales.png", model: "/models/sales.glb" },
-  { emoji: "🎧", role: "Customer Support", desc: "Handles tickets, writes help docs, escalates critical issues.", task: "\"Resolve the 15 open support tickets and update the FAQ.\"" },
-  { emoji: "📊", role: "Data Analyst", desc: "Crunches numbers, builds reports, spots trends in your data.", task: "\"Generate the weekly KPI dashboard and flag anomalies.\"" },
-  { emoji: "🔧", role: "Operations Manager", desc: "Manages workflows, coordinates between teams, optimizes processes.", task: "\"Audit our onboarding flow and reduce steps from 8 to 5.\"" },
-  { emoji: "✍️", role: "Content Writer", desc: "Writes blog posts, social copy, newsletters, and landing pages.", task: "\"Write 3 SEO blog posts targeting our top keywords.\"" },
+  { emoji: "🔍", role: "Lead Researcher", desc: "Finds companies and decision-makers matching your ICP across multiple data sources.", task: "\"Find 50 Series A fintech CTOs in DACH region.\"" },
+  { emoji: "📊", role: "Market Analyst", desc: "Tracks market trends, funding rounds, and hiring signals to spot high-intent buyers.", task: "\"Which AI startups raised Series B in the last 90 days?\"" },
+  { emoji: "🎯", role: "Competitor Scout", desc: "Monitors competitor customers, pricing changes, and market moves for opportunities.", task: "\"Find companies switching away from Competitor X.\"" },
+  { emoji: "✍️", role: "Outreach Writer", desc: "Crafts personalized cold emails and sequences based on each prospect's context.", task: "\"Write a 3-touch sequence for enterprise DevOps leads.\"" },
 ];
 
 const pricing = [
-  { name: "Starter", price: "Free", sub: "forever", agents: "3 agents", features: ["Team structure", "Community templates", "BYOK"] },
-  { name: "Growth", price: "$29", sub: "/month", agents: "15 agents", features: ["Custom templates", "Advanced comm rules", "Priority support"], popular: true },
-  { name: "Business", price: "$79", sub: "/month", agents: "Unlimited agents", features: ["API access", "Team collaboration", "Priority execution"] },
+  { name: "Free", price: "$0", sub: "forever", highlight: "1 campaign", features: ["20 leads per week", "Basic enrichment", "Email export"], popular: false },
+  { name: "Pro", price: "$49", sub: "/month", highlight: "5 campaigns", features: ["200 leads per week", "Full enrichment (email + phone)", "Outreach drafts", "Priority support"], popular: true },
+  { name: "Scale", price: "$149", sub: "/month", highlight: "Unlimited campaigns", features: ["Unlimited leads", "CRM integrations", "API access", "Custom ICP models", "Dedicated support"], popular: false },
 ];
 
 const comparisons = [
-  { them: "Single chatbot", us: "Full AI team hierarchy" },
-  { them: "You orchestrate everything", us: "Agents collaborate autonomously" },
-  { them: "Flat, no structure", us: "Hierarchical delegation & escalation" },
-  { them: "Locked to one provider", us: "BYOK — bring your own API keys" },
-  { them: "\"Here's what you could do…\"", us: "Real execution, real output" },
+  { them: "Static lead databases", us: "AI agents that actively research & qualify" },
+  { them: "Generic contact lists", us: "ICP-matched, scored & enriched leads" },
+  { them: "You write every cold email", us: "Personalized outreach drafted for you" },
+  { them: "Manual research hours", us: "Leads delivered while you sleep" },
+  { them: "One-size-fits-all filters", us: "Intent signals, funding data & hiring trends" },
 ];
 
 /* ───────────────────────── page ───────────────────────── */
@@ -132,7 +126,7 @@ function MobileMenu() {
           <a href="#faq" onClick={() => setOpen(false)} className="text-zinc-300 hover:text-white">FAQ</a>
           <div className="flex gap-3 pt-2 border-t border-white/10">
             <Link href="/sign-in" className="text-sm text-zinc-400 hover:text-white">Sign in</Link>
-            <Link href="/sign-up" className="text-sm px-4 py-2 bg-blue-600 rounded-lg font-medium">Get started</Link>
+            <Link href="/sign-up" className="text-sm px-4 py-2 bg-blue-600 rounded-lg font-medium">Start Finding Leads</Link>
           </div>
         </div>
       )}
@@ -160,7 +154,7 @@ export default function Home() {
               Sign in
             </Link>
             <Link href="/sign-up" className="text-sm px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-medium transition">
-              Get started
+              Start Finding Leads
             </Link>
           </div>
           <MobileMenu />
@@ -169,7 +163,6 @@ export default function Home() {
 
       {/* ─── Hero ─── */}
       <section className="relative pt-40 pb-24 px-6 overflow-hidden min-h-[90vh] flex items-center">
-        {/* Background image — behind text, blended into bg */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <img
             src="/images/hero-workplace.jpg"
@@ -183,19 +176,19 @@ export default function Home() {
         </div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <h1 className="text-5xl sm:text-7xl font-bold tracking-tight leading-[1.1] animate-fade-in-up">
-            Your first employees
+            AI agents that find
             <br />
-            <span className="text-blue-500">are AI.</span>
+            <span className="text-blue-500">your next customers.</span>
           </h1>
           <p className="mt-6 text-lg sm:text-xl text-zinc-400 max-w-2xl mx-auto animate-fade-in-up animate-delay-100">
-            Build and run your company with AI agent teams. Hire roles, define
-            team structures, and let them execute real work — autonomously.
+            Describe your ideal customer. Our AI agents research, qualify, and
+            deliver enriched leads — so your team can focus on closing.
           </p>
           <div className="mt-10 animate-fade-in-up animate-delay-200">
             <CTAButtons center />
           </div>
           <p className="mt-4 text-sm text-zinc-600 animate-fade-in-up animate-delay-300">
-            Free to start · No credit card required · BYOK
+            Free to start · No credit card required · Leads in minutes
           </p>
         </div>
       </section>
@@ -221,17 +214,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── Agent templates ─── */}
+      {/* ─── Agent roles ─── */}
       <section id="agents" className="py-24 px-6 border-t border-white/5 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'url(/images/agents-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }} />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0a] via-transparent to-[#0a0a0a]" />
         <div className="max-w-6xl mx-auto relative z-10">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
-            Agent templates
+            Your AI GTM team
           </h2>
           <p className="text-zinc-400 text-center mb-14 max-w-xl mx-auto">
-            Pre-built roles with system prompts, tools, and default behaviors.
-            Customize or create your own.
+            Specialized agents that work together to fill your pipeline with qualified prospects.
           </p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 max-w-5xl mx-auto gap-6">
             {agents.map((a) => (
@@ -240,15 +230,11 @@ export default function Home() {
                 className="p-5 rounded-xl border border-white/5 bg-white/[0.02] hover:border-blue-500/30 hover:bg-white/[0.04] transition group"
               >
                 <div className="flex justify-center mb-3">
-                  {a.model ? (
-                    <LazyAgentModel modelUrl={a.model} />
-                  ) : (
-                    <div className="w-32 h-32 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-center text-6xl">
-                      {a.emoji}
-                    </div>
-                  )}
+                  <div className="w-20 h-20 rounded-xl bg-white/[0.03] border border-white/5 flex items-center justify-center text-4xl">
+                    {a.emoji}
+                  </div>
                 </div>
-                <h3 className="font-semibold text-white">{a.role}</h3>
+                <h3 className="font-semibold text-white text-center">{a.role}</h3>
                 <p className="mt-1 text-sm text-zinc-400">{a.desc}</p>
                 <p className="mt-3 text-xs text-zinc-600 italic group-hover:text-zinc-500 transition">
                   {a.task}
@@ -263,14 +249,14 @@ export default function Home() {
       <section className="py-24 px-6 border-t border-white/5">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
-            Not another chatbot.
+            Not another lead database.
           </h2>
           <p className="text-zinc-400 text-center mb-14 max-w-xl mx-auto">
-            A single AI assistant gives you suggestions. A full AI org gives you results.
+            Static lists go stale. AI agents actively research, qualify, and deliver.
           </p>
           <div className="grid gap-3">
             <div className="grid grid-cols-2 gap-3 text-sm font-semibold text-zinc-500 px-5">
-              <span>Other AI tools</span>
+              <span>Traditional tools</span>
               <span className="text-blue-400">autofound.ai</span>
             </div>
             {comparisons.map((c, i) => (
@@ -295,7 +281,7 @@ export default function Home() {
             Simple pricing
           </h2>
           <p className="text-zinc-400 text-center mb-14">
-            You bring the API keys. We bring the infrastructure.
+            Start free. Scale when you&apos;re ready.
           </p>
           <div className="grid md:grid-cols-3 gap-6">
             {pricing.map((p) => (
@@ -318,7 +304,7 @@ export default function Home() {
                   <span className="text-zinc-500 text-sm">{p.sub}</span>
                 </div>
                 <p className="mt-2 text-blue-400 text-sm font-medium">
-                  {p.agents}
+                  {p.highlight}
                 </p>
                 <ul className="mt-6 space-y-2 flex-1">
                   {p.features.map((f) => (
@@ -335,7 +321,7 @@ export default function Home() {
                       : "bg-white/5 hover:bg-white/10 text-zinc-300"
                   }`}
                 >
-                  Get started
+                  Start Finding Leads
                 </Link>
               </div>
             ))}
@@ -350,10 +336,10 @@ export default function Home() {
       <section className="py-24 px-6 border-t border-white/5">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Ready to build your AI company?
+            Ready to find your next customers?
           </h2>
           <p className="text-zinc-400 mb-10">
-            Sign up free and hire your first AI employees in minutes.
+            Sign up free and get your first qualified leads in minutes.
           </p>
           <CTAButtons center />
         </div>

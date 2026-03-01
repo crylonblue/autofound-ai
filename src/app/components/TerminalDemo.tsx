@@ -13,70 +13,70 @@ type Line =
 /* ── demo scenarios ── */
 const scenarios: { title: string; lines: Line[] }[] = [
   {
-    title: "Deploy a marketing campaign",
+    title: "Find SaaS leads by ICP",
     lines: [
-      { type: "cmd", text: "autofound run --org acme-corp --task \"Launch Q1 email campaign\"" },
+      { type: "cmd", text: "autofound search --icp \"Series A B2B SaaS, 20-100 employees, DACH region\"" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "CEO Agent received task, delegating to CMO...", color: "#3b82f6" },
-      { type: "status", icon: "▸", text: "CMO Agent planning campaign strategy...", color: "#10b981" },
+      { type: "status", icon: "▸", text: "Lead Researcher scanning company databases...", color: "#3b82f6" },
+      { type: "status", icon: "▸", text: "Market Analyst checking funding data...", color: "#10b981" },
       { type: "blank" },
-      { type: "output", text: "  📋 Campaign: Q1 Product Launch" },
-      { type: "output", text: "  📧 Segments: 3 (Enterprise, SMB, Trial users)" },
-      { type: "output", text: "  ✍️  Writer Agent drafting 3 email variants..." },
+      { type: "output", text: "  🔍 Found 847 companies matching criteria" },
+      { type: "output", text: "  📊 Filtering by hiring signals & tech stack..." },
+      { type: "output", text: "  ✓ 134 high-intent prospects identified" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "Writer Agent completed drafts", color: "#f59e0b" },
-      { type: "status", icon: "▸", text: "CMO Agent reviewing copy...", color: "#10b981" },
-      { type: "output", text: "  ✓ Subject lines A/B tested (predicted 24% open rate)" },
-      { type: "output", text: "  ✓ Compliance check passed" },
-      { type: "output", text: "  ✓ Scheduled: Mon 9:00 AM EST" },
+      { type: "status", icon: "▸", text: "Enriching contacts — email + phone...", color: "#f59e0b" },
+      { type: "output", text: "  ✓ 128/134 emails verified (95.5%)" },
+      { type: "output", text: "  ✓ 89/134 direct phone numbers found" },
       { type: "blank" },
-      { type: "status", icon: "✓", text: "Campaign ready — awaiting your approval to send", color: "#10b981" },
-      { type: "output", text: "  → Review at dashboard.autofound.ai/campaigns/q1-launch", color: "#3b82f6" },
+      { type: "status", icon: "▸", text: "Outreach Writer drafting personalized sequences...", color: "#a855f7" },
+      { type: "output", text: "  ✓ 134 personalized 3-touch email sequences ready" },
+      { type: "blank" },
+      { type: "status", icon: "✓", text: "Campaign ready — 134 qualified leads delivered", color: "#10b981" },
+      { type: "output", text: "  → Review at app.autofound.ai/campaigns/dach-saas", color: "#3b82f6" },
     ],
   },
   {
-    title: "Fix a production bug",
+    title: "Monitor competitor churn",
     lines: [
-      { type: "cmd", text: "autofound run --org acme-corp --task \"Fix auth timeout bug in PR #42\"" },
+      { type: "cmd", text: "autofound scout --competitor \"Competitor X\" --signal churn" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "CEO Agent routing to CTO...", color: "#3b82f6" },
-      { type: "status", icon: "▸", text: "CTO Agent assigning to Dev Agent...", color: "#a855f7" },
+      { type: "status", icon: "▸", text: "Competitor Scout monitoring review sites & social...", color: "#3b82f6" },
+      { type: "status", icon: "▸", text: "Scanning G2, Capterra, Reddit, LinkedIn...", color: "#10b981" },
       { type: "blank" },
-      { type: "output", text: "  🔍 Dev Agent analyzing PR #42..." },
-      { type: "output", text: "  Found: session.maxAge set to 300ms instead of 300s" },
-      { type: "output", text: "  File: src/lib/auth.ts:47" },
+      { type: "output", text: "  🎯 23 companies showing switching signals" },
+      { type: "output", text: "  📉 Competitor X NPS dropped 12pts this quarter" },
+      { type: "output", text: "  💬 8 negative reviews in last 30 days" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "Dev Agent pushing fix...", color: "#a855f7" },
-      { type: "output", text: "  ✓ Fix committed: fix(auth): correct session timeout unit" },
-      { type: "status", icon: "▸", text: "QA Agent running test suite...", color: "#f59e0b" },
-      { type: "output", text: "  ✓ 142/142 tests passing" },
-      { type: "output", text: "  ✓ Auth flow regression: PASS" },
+      { type: "status", icon: "▸", text: "Lead Researcher identifying decision-makers...", color: "#f59e0b" },
+      { type: "output", text: "  ✓ 23 VP/Director-level contacts enriched" },
+      { type: "output", text: "  ✓ Pain points mapped per account" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "CTO Agent approved — deploying to staging", color: "#a855f7" },
-      { type: "status", icon: "✓", text: "Deployed to staging. Promote to prod?", color: "#10b981" },
+      { type: "status", icon: "▸", text: "Outreach Writer crafting displacement sequences...", color: "#a855f7" },
+      { type: "output", text: "  ✓ Personalized switch-pitch for each account" },
+      { type: "blank" },
+      { type: "status", icon: "✓", text: "23 high-intent leads ready for outreach", color: "#10b981" },
     ],
   },
   {
-    title: "Generate a financial report",
+    title: "Track funding signals",
     lines: [
-      { type: "cmd", text: "autofound run --org acme-corp --task \"Monthly P&L report for January\"" },
+      { type: "cmd", text: "autofound watch --trigger \"Series B funding\" --industry fintech --region US" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "CEO Agent delegating to CFO...", color: "#3b82f6" },
-      { type: "status", icon: "▸", text: "CFO Agent pulling financial data...", color: "#f59e0b" },
+      { type: "status", icon: "▸", text: "Market Analyst monitoring funding databases...", color: "#3b82f6" },
+      { type: "output", text: "  📡 Watching Crunchbase, PitchBook, SEC filings..." },
       { type: "blank" },
-      { type: "output", text: "  📊 Data Analyst crunching numbers..." },
-      { type: "output", text: "  Sources: Stripe, QuickBooks, Payroll API" },
+      { type: "status", icon: "▸", text: "Alert: 3 new rounds detected this week", color: "#f59e0b" },
       { type: "blank" },
-      { type: "output", text: "  Revenue:     $142,800  (+12% MoM)" },
-      { type: "output", text: "  COGS:         $38,200" },
-      { type: "output", text: "  OpEx:         $67,400" },
-      { type: "output", text: "  Net Income:   $37,200  (26% margin)" },
+      { type: "output", text: "  🏦 PayFlow  — $28M Series B (a16z)" },
+      { type: "output", text: "  🏦 LendKit  — $15M Series B (Sequoia)" },
+      { type: "output", text: "  🏦 VaultPay — $42M Series B (Tiger Global)" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "CFO Agent flagged 2 anomalies", color: "#f59e0b" },
-      { type: "output", text: "  ⚠ AWS spend +34% — Dev Agent notified to investigate" },
-      { type: "output", text: "  ⚠ Subscription churn 4.2% — Sales Agent creating win-back flow" },
+      { type: "status", icon: "▸", text: "Lead Researcher pulling org charts...", color: "#10b981" },
+      { type: "output", text: "  ✓ 12 decision-makers identified across 3 companies" },
+      { type: "output", text: "  ✓ Budget likelihood: HIGH (post-funding expansion)" },
       { type: "blank" },
-      { type: "status", icon: "✓", text: "Report generated — PDF + Notion page ready", color: "#10b981" },
+      { type: "status", icon: "✓", text: "12 warm leads added to your pipeline", color: "#10b981" },
+      { type: "output", text: "  → Auto-synced to HubSpot", color: "#3b82f6" },
     ],
   },
 ];
@@ -128,7 +128,6 @@ export default function TerminalDemo() {
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i];
           if (i === 0 && line.type === "cmd") {
-            /* type out the command char by char */
             setIsTypingCmd(true);
             for (let c = 1; c <= line.text.length; c++) {
               setTypingCmd(line.text.slice(0, c));
@@ -187,7 +186,7 @@ export default function TerminalDemo() {
           See it in action
         </h2>
         <p className="text-zinc-400 text-center mb-8 max-w-xl mx-auto">
-          Watch AI agents collaborate to complete real business tasks.
+          Watch AI agents find, qualify, and enrich leads in real time.
         </p>
 
         {/* scenario tabs */}
@@ -214,7 +213,7 @@ export default function TerminalDemo() {
             <div className="w-3 h-3 rounded-full bg-red-500/80" />
             <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
             <div className="w-3 h-3 rounded-full bg-green-500/80" />
-            <span className="ml-3 text-xs text-zinc-600 font-mono">autofound — terminal</span>
+            <span className="ml-3 text-xs text-zinc-600 font-mono">autofound — lead search</span>
           </div>
 
           {/* terminal body */}
@@ -223,7 +222,6 @@ export default function TerminalDemo() {
             className="p-5 font-mono text-sm leading-relaxed h-[380px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10"
           >
             {visibleLines.map(renderLine)}
-            {/* typing cursor for command */}
             {isTypingCmd && (
               <div className="flex gap-2">
                 <span className="text-emerald-400 shrink-0">$</span>
@@ -233,7 +231,6 @@ export default function TerminalDemo() {
                 </span>
               </div>
             )}
-            {/* idle cursor */}
             {done && (
               <div className="flex gap-2 mt-1">
                 <span className="text-emerald-400 shrink-0">$</span>
@@ -244,7 +241,7 @@ export default function TerminalDemo() {
         </div>
 
         <p className="text-center text-xs text-zinc-600 mt-4">
-          Simulated demo · Real agents execute actual tasks in your workspace
+          Simulated demo · Real agents deliver actual qualified leads
         </p>
       </div>
     </section>
