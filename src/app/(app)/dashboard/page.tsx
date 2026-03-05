@@ -9,7 +9,6 @@ import {
   Zap,
   ArrowRight,
   GitBranchPlus,
-  Loader2,
   Coins,
 } from "lucide-react";
 import { useQuery } from "convex/react";
@@ -18,21 +17,14 @@ import { api } from "../../../../convex/_generated/api";
 import OnboardingChecklist from "../../components/OnboardingChecklist";
 import ActivityFeed from "../../components/ActivityFeed";
 import { estimateCost, formatTokens, formatCost } from "../../../lib/tokenCost";
-
-function useClerkUser() {
-  return useUser();
-}
-
-const statusColors: Record<string, { color: string; bg: string }> = {
-  pending: { color: "text-zinc-400", bg: "bg-zinc-500/10" },
-  running: { color: "text-blue-400", bg: "bg-blue-500/10" },
-  needs_approval: { color: "text-amber-400", bg: "bg-amber-500/10" },
-  completed: { color: "text-emerald-400", bg: "bg-emerald-500/10" },
-  failed: { color: "text-red-400", bg: "bg-red-500/10" },
-};
+import { PageHeader } from "@/components/PageHeader";
+import { AgentAvatar } from "@/components/AgentAvatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
-  const { user: clerkUser, isLoaded } = useClerkUser();
+  const { user: clerkUser, isLoaded } = useUser();
   const clerkId = clerkUser?.id ?? "";
 
   const agents = useQuery(api.agents.listAgentsByClerk, clerkId ? { clerkId } : "skip");
@@ -40,38 +32,46 @@ export default function DashboardPage() {
   const usage = useQuery(api.messages.getUsageAllAgents, clerkId ? { clerkId } : "skip");
 
   if (!isLoaded) {
-    return <div className="p-8 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-zinc-400" /></div>;
+    return (
+      <div className="p-8 max-w-7xl mx-auto space-y-6">
+        <div className="flex justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-4 w-60" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
-  const activeAgents = agents?.filter((a) => a.status === "active") ?? [];
-  const completedTasks = tasks?.filter((t) => t.status === "completed") ?? [];
-  const pendingTasks = tasks?.filter((t) => t.status === "pending" || t.status === "needs_approval") ?? [];
-  const recentTasks = [...(tasks ?? [])].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
+  const activeAgents = agents?.filter((a: any) => a.status === "active") ?? [];
+  const completedTasks = tasks?.filter((t: any) => t.status === "completed") ?? [];
+  const pendingTasks = tasks?.filter((t: any) => t.status === "pending" || t.status === "needs_approval") ?? [];
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-zinc-400 text-sm mt-1">
-            {activeAgents.length > 0
-              ? `${activeAgents.length} agent${activeAgents.length !== 1 ? "s" : ""} active`
-              : "Get started by hiring your first agent"}
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Link
-            href="/agents"
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-lg text-sm font-medium hover:bg-blue-500 transition-colors"
-          >
+      <PageHeader
+        title="Dashboard"
+        subtitle={
+          activeAgents.length > 0
+            ? `${activeAgents.length} agent${activeAgents.length !== 1 ? "s" : ""} active`
+            : "Get started by hiring your first agent"
+        }
+      >
+        <Button asChild>
+          <Link href="/agents">
             <Plus className="w-4 h-4" />
             Hire Agent
           </Link>
-        </div>
-      </div>
+        </Button>
+      </PageHeader>
 
-      {/* Onboarding */}
       <OnboardingChecklist />
 
       {/* Stats */}
@@ -82,93 +82,97 @@ export default function DashboardPage() {
           { label: "Tokens Used", value: usage ? formatTokens(usage.totalTokens) : "—", icon: Zap, color: "text-purple-400" },
           { label: "Est. Cost", value: usage ? formatCost(estimateCost(usage.totalInputTokens, usage.totalOutputTokens)) : "—", icon: Coins, color: "text-amber-400" },
         ].map((stat) => (
-          <div key={stat.label} className="bg-white/[0.03] border border-white/10 rounded-xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-zinc-400">{stat.label}</span>
-              <stat.icon className={`w-4 h-4 ${stat.color}`} />
-            </div>
-            <div className="text-2xl font-bold">{stat.value}</div>
-          </div>
+          <Card key={stat.label}>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-muted-foreground">{stat.label}</span>
+                <stat.icon className={`w-4 h-4 ${stat.color}`} />
+              </div>
+              <div className="text-2xl font-bold">{stat.value}</div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Activity Feed */}
-        <div className="lg:col-span-2 bg-white/[0.03] border border-white/10 rounded-xl">
-          <div className="flex items-center justify-between p-5 border-b border-white/10">
-            <h2 className="font-semibold flex items-center gap-2">
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
               <Activity className="w-4 h-4 text-blue-400" />
               Activity Feed
-            </h2>
+            </CardTitle>
             <span className="text-[10px] text-zinc-600 uppercase tracking-wider">Live</span>
-          </div>
-          <div className="p-4">
+          </CardHeader>
+          <CardContent>
             <ActivityFeed compact limit={15} />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Right column */}
         <div className="space-y-6">
           {/* Agents */}
-          <div className="bg-white/[0.03] border border-white/10 rounded-xl">
-            <div className="flex items-center justify-between p-5 border-b border-white/10">
-              <h2 className="font-semibold flex items-center gap-2">
+          <Card>
+            <CardHeader className="flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
                 <Users className="w-4 h-4 text-blue-400" />
                 Agents
-              </h2>
+              </CardTitle>
               <Link href="/agents" className="text-xs text-blue-400 hover:text-blue-300">View all</Link>
-            </div>
+            </CardHeader>
             {(!agents || agents.length === 0) ? (
-              <div className="p-6 text-center text-zinc-500 text-sm">
+              <CardContent className="text-center text-muted-foreground text-sm py-6">
                 No agents yet. <Link href="/agents" className="text-blue-400 hover:underline">Hire one</Link>
-              </div>
+              </CardContent>
             ) : (
               <div className="divide-y divide-white/5">
-                {agents.slice(0, 5).map((agent) => (
+                {agents.slice(0, 5).map((agent: any) => (
                   <div key={agent._id} className="flex items-center gap-3 p-4">
-                    <span className="text-xl">{agent.icon}</span>
+                    <AgentAvatar icon={agent.icon} color={agent.color} size="sm" />
                     <div className="flex-1">
                       <p className="text-sm font-medium">{agent.name}</p>
-                      <p className="text-xs text-zinc-500">{agent.role}</p>
+                      <p className="text-xs text-muted-foreground">{agent.role}</p>
                     </div>
                     <div className={`w-2 h-2 rounded-full ${agent.status === "active" ? "bg-emerald-400" : "bg-zinc-600"}`} />
                   </div>
                 ))}
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Usage by Agent */}
           {usage && usage.agents.length > 0 && (
-            <div className="bg-white/[0.03] border border-white/10 rounded-xl">
-              <div className="p-5 border-b border-white/10">
-                <h2 className="font-semibold flex items-center gap-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
                   <Coins className="w-4 h-4 text-amber-400" />
                   Usage by Agent
-                </h2>
-              </div>
+                </CardTitle>
+              </CardHeader>
               <div className="divide-y divide-white/5">
                 {usage.agents
-                  .sort((a, b) => b.totalTokens - a.totalTokens)
-                  .map((agent) => (
+                  .sort((a: any, b: any) => b.totalTokens - a.totalTokens)
+                  .map((agent: any) => (
                     <div key={agent.agentId} className="flex items-center gap-3 p-4">
-                      <span className="text-xl">{agent.icon}</span>
+                      <AgentAvatar icon={agent.icon} color="#3b82f6" size="sm" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{agent.name}</p>
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-xs text-muted-foreground">
                           {formatTokens(agent.totalTokens)} tokens · {formatCost(estimateCost(agent.inputTokens, agent.outputTokens, agent.lastModel, agent.lastProvider))}
                         </p>
                       </div>
                     </div>
                   ))}
               </div>
-            </div>
+            </Card>
           )}
 
           {/* Quick Actions */}
-          <div className="bg-white/[0.03] border border-white/10 rounded-xl p-5">
-            <h2 className="font-semibold mb-4">Quick Actions</h2>
-            <div className="space-y-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
               <Link href="/org-chart" className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] transition-colors text-sm">
                 <span className="flex items-center gap-2"><GitBranchPlus className="w-4 h-4 text-blue-400" />Edit Org Chart</span>
                 <ArrowRight className="w-3 h-3 text-zinc-600" />
@@ -181,8 +185,8 @@ export default function DashboardPage() {
                 <span className="flex items-center gap-2"><Zap className="w-4 h-4 text-amber-400" />API Keys</span>
                 <ArrowRight className="w-3 h-3 text-zinc-600" />
               </Link>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

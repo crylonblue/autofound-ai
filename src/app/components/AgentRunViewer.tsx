@@ -10,33 +10,17 @@ import {
   ChevronDown,
   ChevronRight,
   Zap,
-  CheckCircle2,
-  XCircle,
   Clock,
-  CircleDot,
 } from "lucide-react";
+import { RUN_STATUS } from "@/lib/status";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Pricing per 1K tokens (Claude)
 const INPUT_COST_PER_1K = 0.003;
 const OUTPUT_COST_PER_1K = 0.015;
-
-const statusStyles: Record<string, { label: string; color: string; bg: string; pulse?: boolean }> = {
-  queued: { label: "Queued", color: "text-zinc-400", bg: "bg-zinc-500/20" },
-  starting: { label: "Starting", color: "text-yellow-400", bg: "bg-yellow-500/20" },
-  running: { label: "Running", color: "text-blue-400", bg: "bg-blue-500/20", pulse: true },
-  completed: { label: "Completed", color: "text-emerald-400", bg: "bg-emerald-500/20" },
-  failed: { label: "Failed", color: "text-red-400", bg: "bg-red-500/20" },
-  cancelled: { label: "Cancelled", color: "text-zinc-400", bg: "bg-zinc-500/20" },
-};
-
-const statusIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  queued: Clock,
-  starting: CircleDot,
-  running: Loader2,
-  completed: CheckCircle2,
-  failed: XCircle,
-  cancelled: Square,
-};
 
 function ToolCallCard({ tool, args, result, timestamp }: {
   tool: string;
@@ -100,7 +84,6 @@ function StreamingText({ text }: { text: string }) {
   const prevLen = useRef(0);
 
   useEffect(() => {
-    // Only animate new content
     if (text.length <= prevLen.current) {
       setDisplayed(text);
       prevLen.current = text.length;
@@ -112,7 +95,7 @@ function StreamingText({ text }: { text: string }) {
     let i = 0;
 
     const interval = setInterval(() => {
-      i += 3; // 3 chars at a time for speed
+      i += 3;
       if (i >= newContent.length) {
         setDisplayed(text);
         prevLen.current = text.length;
@@ -153,8 +136,8 @@ export default function AgentRunViewer({ runId }: { runId: Id<"agentRuns"> }) {
     );
   }
 
-  const style = statusStyles[run.status] || statusStyles.queued;
-  const StatusIcon = statusIcons[run.status] || Clock;
+  const style = RUN_STATUS[run.status as keyof typeof RUN_STATUS] || RUN_STATUS.queued;
+  const StatusIcon = style.icon;
   const isActive = run.status === "queued" || run.status === "starting" || run.status === "running";
 
   const inputCost = ((run.inputTokens || 0) / 1000) * INPUT_COST_PER_1K;
@@ -175,14 +158,14 @@ export default function AgentRunViewer({ runId }: { runId: Id<"agentRuns"> }) {
     : 0;
 
   return (
-    <div className="bg-white/[0.02] border border-white/10 rounded-xl overflow-hidden">
+    <Card className="overflow-hidden">
       {/* Status bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
         <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${style.bg} ${style.color}`}>
+          <Badge variant="secondary" className={`${style.bg} ${style.color}`}>
             <StatusIcon className={`w-3.5 h-3.5 ${style.pulse ? "animate-spin" : ""}`} />
             {style.label}
-          </div>
+          </Badge>
           {elapsed > 0 && (
             <span className="text-[11px] text-zinc-500">
               {elapsed < 60 ? `${Math.round(elapsed)}s` : `${Math.floor(elapsed / 60)}m ${Math.round(elapsed % 60)}s`}
@@ -190,7 +173,6 @@ export default function AgentRunViewer({ runId }: { runId: Id<"agentRuns"> }) {
           )}
         </div>
         <div className="flex items-center gap-3">
-          {/* Token counter */}
           {(run.inputTokens || run.outputTokens) ? (
             <div className="flex items-center gap-2 text-[11px] text-zinc-500">
               <span>{(run.inputTokens || 0).toLocaleString()} in</span>
@@ -200,12 +182,13 @@ export default function AgentRunViewer({ runId }: { runId: Id<"agentRuns"> }) {
               <span className="text-zinc-400">${totalCost.toFixed(4)}</span>
             </div>
           ) : null}
-          {/* Cancel button */}
           {isActive && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleCancel}
               disabled={cancelling}
-              className="flex items-center gap-1 px-2.5 py-1 text-xs text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors disabled:opacity-50"
+              className="text-red-400 bg-red-500/10 hover:bg-red-500/20 hover:text-red-400"
             >
               {cancelling ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -213,63 +196,60 @@ export default function AgentRunViewer({ runId }: { runId: Id<"agentRuns"> }) {
                 <Square className="w-3 h-3" />
               )}
               Cancel
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
-        {/* Progress text */}
-        {run.progressText && (
-          <div>
-            <StreamingText text={run.progressText} />
-          </div>
-        )}
+      <ScrollArea className="max-h-96">
+        <div className="p-4 space-y-3">
+          {run.progressText && (
+            <div>
+              <StreamingText text={run.progressText} />
+            </div>
+          )}
 
-        {/* Tool calls */}
-        {run.toolCalls && run.toolCalls.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">
-              Tool Calls ({run.toolCalls.length})
-            </p>
-            {run.toolCalls.map((tc: { tool: string; args?: string; result?: string; timestamp: number }, i: number) => (
-              <ToolCallCard
-                key={i}
-                tool={tc.tool}
-                args={tc.args}
-                result={tc.result}
-                timestamp={tc.timestamp}
-              />
-            ))}
-          </div>
-        )}
+          {run.toolCalls && run.toolCalls.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium">
+                Tool Calls ({run.toolCalls.length})
+              </p>
+              {run.toolCalls.map((tc: { tool: string; args?: string; result?: string; timestamp: number }, i: number) => (
+                <ToolCallCard
+                  key={i}
+                  tool={tc.tool}
+                  args={tc.args}
+                  result={tc.result}
+                  timestamp={tc.timestamp}
+                />
+              ))}
+            </div>
+          )}
 
-        {/* Error */}
-        {run.error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-            <p className="text-xs text-red-400 font-mono">{run.error}</p>
-          </div>
-        )}
+          {run.error && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+              <p className="text-xs text-red-400 font-mono">{run.error}</p>
+            </div>
+          )}
 
-        {/* Final output */}
-        {run.status === "completed" && run.output && (
-          <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3">
-            <p className="text-[10px] text-emerald-500/60 uppercase tracking-wider font-medium mb-1.5">Result</p>
-            <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono">{run.output}</pre>
-          </div>
-        )}
+          {run.status === "completed" && run.output && (
+            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3">
+              <p className="text-[10px] text-emerald-500/60 uppercase tracking-wider font-medium mb-1.5">Result</p>
+              <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono">{run.output}</pre>
+            </div>
+          )}
 
-        {/* Empty running state */}
-        {isActive && !run.progressText && !run.toolCalls?.length && (
-          <div className="flex items-center gap-2 py-4 justify-center text-zinc-500 text-sm">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Waiting for agent output…
-          </div>
-        )}
+          {isActive && !run.progressText && !run.toolCalls?.length && (
+            <div className="flex items-center gap-2 py-4 justify-center text-zinc-500 text-sm">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Waiting for agent output…
+            </div>
+          )}
 
-        <div ref={bottomRef} />
-      </div>
-    </div>
+          <div ref={bottomRef} />
+        </div>
+      </ScrollArea>
+    </Card>
   );
 }

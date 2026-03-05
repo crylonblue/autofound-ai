@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useQuery, useMutation } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "../../../convex/_generated/api";
-import { Key, Users, ListTodo, CheckCircle2, Circle, X, Rocket } from "lucide-react";
+import { Key, Users, ListTodo, CheckCircle2, Circle, Rocket } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function OnboardingChecklist() {
   const { user: clerkUser } = useUser();
@@ -42,14 +44,16 @@ export default function OnboardingChecklist() {
   const completedCount = steps.filter((s) => s.done).length;
 
   return (
-    <div className="relative bg-gradient-to-r from-blue-600/10 to-purple-600/10 border border-blue-500/20 rounded-xl p-5 mb-6">
-      <button
+    <Card className="relative bg-gradient-to-r from-blue-600/10 to-purple-600/10 border-blue-500/20 p-5 mb-6">
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={() => dismiss({ clerkId })}
-        className="absolute top-3 right-3 text-zinc-500 hover:text-zinc-300 transition-colors"
+        className="absolute top-3 right-3 text-zinc-500 hover:text-zinc-300 h-6 w-6"
         aria-label="Dismiss"
       >
-        <X className="w-4 h-4" />
-      </button>
+        ×
+      </Button>
 
       <div className="flex items-center gap-2 mb-4">
         <Rocket className="w-5 h-5 text-blue-400" />
@@ -95,6 +99,6 @@ export default function OnboardingChecklist() {
           </Link>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }

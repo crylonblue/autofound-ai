@@ -13,8 +13,9 @@ import {
   Settings,
   Zap,
   Menu,
-  X,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -89,24 +90,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile top bar */}
       <div className="fixed top-0 left-0 right-0 z-40 h-14 bg-[#0a0a0a]/90 backdrop-blur-md border-b border-white/10 flex items-center px-4 md:hidden">
-        <button onClick={() => setSidebarOpen(true)} className="p-2 text-zinc-400 hover:text-white">
-          <Menu className="w-5 h-5" />
-        </button>
+        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white">
+              <Menu className="w-5 h-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-64 p-0 bg-[#0a0a0a] border-r border-white/10 flex flex-col">
+            <SheetTitle className="sr-only">Navigation</SheetTitle>
+            <SidebarContent pathname={pathname} onNavigate={() => setSidebarOpen(false)} />
+          </SheetContent>
+        </Sheet>
         <span className="ml-2 font-bold text-sm">autofound<span className="text-blue-500">.ai</span></span>
       </div>
-
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setSidebarOpen(false)} />
-          <aside className="relative w-64 h-full bg-[#0a0a0a] border-r border-white/10 flex flex-col">
-            <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-1 text-zinc-400 hover:text-white">
-              <X className="w-5 h-5" />
-            </button>
-            <SidebarContent pathname={pathname} onNavigate={() => setSidebarOpen(false)} />
-          </aside>
-        </div>
-      )}
 
       {/* Desktop sidebar */}
       <aside className="hidden md:flex w-64 border-r border-white/10 flex-col">

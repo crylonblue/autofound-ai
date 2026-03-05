@@ -6,25 +6,13 @@ import { useUser } from "@clerk/nextjs";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import Link from "next/link";
-import {
-  Heart,
-  CheckCircle2,
-  XCircle,
-  MessageSquare,
-  Zap,
-  AlertTriangle,
-  Filter,
-  Loader2,
-} from "lucide-react";
-
-const typeConfig: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; color: string; bg: string }> = {
-  heartbeat_complete: { label: "Heartbeat", icon: Heart, color: "text-pink-400", bg: "bg-pink-500/10" },
-  task_complete: { label: "Task Done", icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-500/10" },
-  task_failed: { label: "Task Failed", icon: XCircle, color: "text-red-400", bg: "bg-red-500/10" },
-  chat_response: { label: "Chat", icon: MessageSquare, color: "text-blue-400", bg: "bg-blue-500/10" },
-  proactive_action: { label: "Proactive", icon: Zap, color: "text-amber-400", bg: "bg-amber-500/10" },
-  error: { label: "Error", icon: AlertTriangle, color: "text-red-400", bg: "bg-red-500/10" },
-};
+import { Filter, Loader2 } from "lucide-react";
+import { ACTIVITY_TYPE } from "@/lib/status";
+import { AgentAvatar } from "@/components/AgentAvatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/EmptyState";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
@@ -38,9 +26,7 @@ function timeAgo(ts: number): string {
 }
 
 interface ActivityFeedProps {
-  /** Show compact version (for dashboard sidebar) */
   compact?: boolean;
-  /** Max items to show */
   limit?: number;
 }
 
@@ -64,19 +50,26 @@ export default function ActivityFeed({ compact = false, limit = 20 }: ActivityFe
 
   if (!activities) {
     return (
-      <div className="flex items-center justify-center py-6">
-        <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
+      <div className="space-y-3 py-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex items-start gap-3 px-1">
+            <Skeleton className="w-7 h-7 rounded-lg shrink-0" />
+            <div className="flex-1 space-y-1">
+              <Skeleton className="h-3 w-32" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
 
   if (activities.length === 0) {
     return (
-      <div className="text-center py-8 text-zinc-500 text-sm">
-        <Zap className="w-8 h-8 mx-auto mb-2 text-zinc-600" />
-        <p>No activity yet.</p>
-        <p className="text-xs mt-1">Activity will appear here as your agents work.</p>
-      </div>
+      <EmptyState
+        title="No activity yet."
+        description="Activity will appear here as your agents work."
+      />
     );
   }
 
@@ -86,33 +79,33 @@ export default function ActivityFeed({ compact = false, limit = 20 }: ActivityFe
       {!compact && agents && agents.length > 1 && (
         <div className="flex items-center gap-2 mb-3 px-1">
           <Filter className="w-3 h-3 text-zinc-500" />
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setFilterAgent(null)}
-            className={`px-2 py-0.5 rounded text-xs transition-colors ${
-              !filterAgent ? "bg-blue-500/10 text-blue-400" : "text-zinc-500 hover:text-zinc-300"
-            }`}
+            className={!filterAgent ? "bg-blue-500/10 text-blue-400 hover:bg-blue-500/15 hover:text-blue-400" : "text-zinc-500"}
           >
             All
-          </button>
-          {agents.map((agent) => (
-            <button
+          </Button>
+          {agents.map((agent: any) => (
+            <Button
               key={agent._id}
+              variant="ghost"
+              size="sm"
               onClick={() => setFilterAgent(filterAgent === agent._id ? null : agent._id)}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs transition-colors ${
-                filterAgent === agent._id ? "bg-blue-500/10 text-blue-400" : "text-zinc-500 hover:text-zinc-300"
-              }`}
+              className={filterAgent === agent._id ? "bg-blue-500/10 text-blue-400 hover:bg-blue-500/15 hover:text-blue-400" : "text-zinc-500"}
             >
               <span>{agent.icon}</span>
               {agent.name}
-            </button>
+            </Button>
           ))}
         </div>
       )}
 
       {/* Activity list */}
       <div className="divide-y divide-white/5">
-        {activities.map((activity) => {
-          const tc = typeConfig[activity.type] ?? typeConfig.error;
+        {activities.map((activity: any) => {
+          const tc = ACTIVITY_TYPE[activity.type as keyof typeof ACTIVITY_TYPE] ?? ACTIVITY_TYPE.error;
           const Icon = tc.icon;
           const taskId = activity.metadata?.taskId;
 
@@ -133,9 +126,9 @@ export default function ActivityFeed({ compact = false, limit = 20 }: ActivityFe
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-zinc-300">{activity.agentName}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${tc.bg} ${tc.color}`}>{tc.label}</span>
+                  <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${tc.bg} ${tc.color}`}>{tc.label}</Badge>
                 </div>
-                <p className="text-sm text-zinc-400 mt-0.5 line-clamp-2">{activity.summary}</p>
+                <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{activity.summary}</p>
                 {activity.metadata?.tokensUsed && (
                   <span className="text-[10px] text-zinc-600 mt-0.5 inline-block">
                     {activity.metadata.tokensUsed.toLocaleString()} tokens
