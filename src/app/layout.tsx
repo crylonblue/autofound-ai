@@ -3,21 +3,22 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "autofound.ai — Build Your Company with AI Employees",
+  title: "autofound.ai — Build Autonomous Agents at Scale",
   description:
-    "Hire AI agents, define org charts, and let them execute real work. Your first employees are AI.",
+    "Create AI agents with custom skills, your own API keys, and isolated execution. The agent toolbox for developers and founders.",
   openGraph: {
-    title: "autofound.ai — Build Your Company with AI Employees",
+    title: "autofound.ai — Build Autonomous Agents at Scale",
     description:
-      "Hire AI agents, define org charts, and let them execute real work.",
+      "Create AI agents with custom skills, your own API keys, and isolated execution.",
     url: "https://autofound.ai",
     siteName: "autofound.ai",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "autofound.ai — Build Your Company with AI Employees",
-    description: "Hire AI agents, define org charts, and let them execute real work.",
+    title: "autofound.ai — Build Autonomous Agents at Scale",
+    description:
+      "Create AI agents with custom skills, your own API keys, and isolated execution.",
   },
 };
 

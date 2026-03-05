@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 /* ── terminal line types ── */
 type Line =
@@ -10,73 +11,75 @@ type Line =
   | { type: "divider" }
   | { type: "blank" };
 
-/* ── demo scenarios ── */
-const scenarios: { title: string; lines: Line[] }[] = [
+/* ── demo scenarios (agent toolbox) ── */
+const scenarios: { id: string; title: string; lines: Line[] }[] = [
   {
-    title: "Find SaaS leads by ICP",
+    id: "research",
+    title: "Research & summarize",
     lines: [
-      { type: "cmd", text: "autofound search --icp \"Series A B2B SaaS, 20-100 employees, DACH region\"" },
+      { type: "cmd", text: "agent run research-bot --task \"Summarize competitor pricing for Q1 report\"" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "Lead Researcher scanning company databases...", color: "#3b82f6" },
-      { type: "status", icon: "▸", text: "Market Analyst checking funding data...", color: "#10b981" },
+      { type: "status", icon: "▸", text: "research-bot activated — skills: web-research, memory", color: "#3b82f6" },
+      { type: "status", icon: "▸", text: "web-research: searching for competitor pricing pages...", color: "#10b981" },
       { type: "blank" },
-      { type: "output", text: "  🔍 Found 847 companies matching criteria" },
-      { type: "output", text: "  📊 Filtering by hiring signals & tech stack..." },
-      { type: "output", text: "  ✓ 134 high-intent prospects identified" },
+      { type: "output", text: "  🔍 Found 12 competitor pricing pages" },
+      { type: "output", text: "  📄 Fetching: acme.com/pricing, rival.io/plans, ..." },
+      { type: "status", icon: "▸", text: "web-research: extracting pricing data...", color: "#10b981" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "Enriching contacts — email + phone...", color: "#f59e0b" },
-      { type: "output", text: "  ✓ 128/134 emails verified (95.5%)" },
-      { type: "output", text: "  ✓ 89/134 direct phone numbers found" },
+      { type: "output", text: "  ✓ Acme Corp — Starter: $0, Pro: $49, Enterprise: Custom" },
+      { type: "output", text: "  ✓ Rival.io — Free: $0, Team: $29, Business: $99" },
+      { type: "output", text: "  ✓ Nexus AI — Solo: $19, Growth: $59, Scale: $149" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "Outreach Writer drafting personalized sequences...", color: "#a855f7" },
-      { type: "output", text: "  ✓ 134 personalized 3-touch email sequences ready" },
+      { type: "status", icon: "▸", text: "memory: saving findings to workspace...", color: "#a855f7" },
+      { type: "output", text: "  ✓ Report saved: /reports/competitor-pricing-q1.md" },
       { type: "blank" },
-      { type: "status", icon: "✓", text: "Campaign ready — 134 qualified leads delivered", color: "#10b981" },
-      { type: "output", text: "  → Review at app.autofound.ai/campaigns/dach-saas", color: "#3b82f6" },
+      { type: "status", icon: "✓", text: "Task complete — 12 competitors analyzed, report generated", color: "#10b981" },
     ],
   },
   {
-    title: "Monitor competitor churn",
+    id: "deploy",
+    title: "Deploy & execute code",
     lines: [
-      { type: "cmd", text: "autofound scout --competitor \"Competitor X\" --signal churn" },
+      { type: "cmd", text: "agent run dev-agent --task \"Run the data pipeline and deploy to staging\"" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "Competitor Scout monitoring review sites & social...", color: "#3b82f6" },
-      { type: "status", icon: "▸", text: "Scanning G2, Capterra, Reddit, LinkedIn...", color: "#10b981" },
+      { type: "status", icon: "▸", text: "dev-agent activated — skills: pod-compute, file-management", color: "#3b82f6" },
+      { type: "status", icon: "▸", text: "pod-compute: spinning up ephemeral container...", color: "#06b6d4" },
       { type: "blank" },
-      { type: "output", text: "  🎯 23 companies showing switching signals" },
-      { type: "output", text: "  📉 Competitor X NPS dropped 12pts this quarter" },
-      { type: "output", text: "  💬 8 negative reviews in last 30 days" },
+      { type: "output", text: "  🐳 Container ready: fly-pod-8a2f (256MB, us-east)" },
+      { type: "output", text: "  📦 Installing dependencies..." },
+      { type: "status", icon: "▸", text: "pod-compute: executing pipeline.py...", color: "#06b6d4" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "Lead Researcher identifying decision-makers...", color: "#f59e0b" },
-      { type: "output", text: "  ✓ 23 VP/Director-level contacts enriched" },
-      { type: "output", text: "  ✓ Pain points mapped per account" },
+      { type: "output", text: "  ✓ ETL: 14,230 rows processed (3.2s)" },
+      { type: "output", text: "  ✓ Validation: all schema checks passed" },
+      { type: "output", text: "  ✓ Tests: 28/28 passing" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "Outreach Writer crafting displacement sequences...", color: "#a855f7" },
-      { type: "output", text: "  ✓ Personalized switch-pitch for each account" },
+      { type: "status", icon: "▸", text: "file-management: saving artifacts...", color: "#f59e0b" },
+      { type: "output", text: "  ✓ Output: /data/processed/q1-pipeline.parquet" },
+      { type: "status", icon: "▸", text: "pod-compute: deploying to staging...", color: "#06b6d4" },
       { type: "blank" },
-      { type: "status", icon: "✓", text: "23 high-intent leads ready for outreach", color: "#10b981" },
+      { type: "status", icon: "✓", text: "Deployed to staging. Container terminated.", color: "#10b981" },
     ],
   },
   {
-    title: "Track funding signals",
+    id: "heartbeat",
+    title: "Scheduled heartbeat",
     lines: [
-      { type: "cmd", text: "autofound watch --trigger \"Series B funding\" --industry fintech --region US" },
+      { type: "cmd", text: "agent heartbeat monitor-bot --interval 30m" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "Market Analyst monitoring funding databases...", color: "#3b82f6" },
-      { type: "output", text: "  📡 Watching Crunchbase, PitchBook, SEC filings..." },
+      { type: "status", icon: "♥", text: "monitor-bot heartbeat triggered (every 30m)", color: "#ec4899" },
+      { type: "status", icon: "▸", text: "skills: web-research, communication, memory", color: "#3b82f6" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "Alert: 3 new rounds detected this week", color: "#f59e0b" },
+      { type: "output", text: "  📊 Checking monitored services..." },
+      { type: "output", text: "  ✓ API uptime: 99.97% (last 24h)" },
+      { type: "output", text: "  ✓ Error rate: 0.02% — within threshold" },
+      { type: "output", text: "  ⚠ Response time: p99 = 820ms (threshold: 500ms)" },
       { type: "blank" },
-      { type: "output", text: "  🏦 PayFlow  — $28M Series B (a16z)" },
-      { type: "output", text: "  🏦 LendKit  — $15M Series B (Sequoia)" },
-      { type: "output", text: "  🏦 VaultPay — $42M Series B (Tiger Global)" },
+      { type: "status", icon: "▸", text: "communication: alerting ops-agent about latency spike...", color: "#f59e0b" },
+      { type: "output", text: "  → Message sent to ops-agent: \"p99 latency spike detected\"" },
+      { type: "status", icon: "▸", text: "memory: logging anomaly to history...", color: "#a855f7" },
       { type: "blank" },
-      { type: "status", icon: "▸", text: "Lead Researcher pulling org charts...", color: "#10b981" },
-      { type: "output", text: "  ✓ 12 decision-makers identified across 3 companies" },
-      { type: "output", text: "  ✓ Budget likelihood: HIGH (post-funding expansion)" },
-      { type: "blank" },
-      { type: "status", icon: "✓", text: "12 warm leads added to your pipeline", color: "#10b981" },
-      { type: "output", text: "  → Auto-synced to HubSpot", color: "#3b82f6" },
+      { type: "output", text: "  ✓ Anomaly logged: /memory/incidents/latency-2025-01-15.json" },
+      { type: "status", icon: "♥", text: "Heartbeat complete. Next check in 30m.", color: "#ec4899" },
     ],
   },
 ];
@@ -86,15 +89,13 @@ const CMD_CHAR_MS = 30;
 const LINE_DELAY_MS = 80;
 
 export default function TerminalDemo() {
-  const [activeIdx, setActiveIdx] = useState(0);
+  const [activeId, setActiveId] = useState(scenarios[0].id);
   const [visibleLines, setVisibleLines] = useState<Line[]>([]);
   const [typingCmd, setTypingCmd] = useState("");
   const [isTypingCmd, setIsTypingCmd] = useState(false);
   const [done, setDone] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-
-  const scenario = scenarios[activeIdx];
 
   /* auto-scroll */
   useEffect(() => {
@@ -104,18 +105,19 @@ export default function TerminalDemo() {
   }, [visibleLines, typingCmd]);
 
   /* play a scenario */
-  const play = useCallback((idx: number) => {
+  const play = useCallback((id: string) => {
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
 
-    setActiveIdx(idx);
+    setActiveId(id);
     setVisibleLines([]);
     setTypingCmd("");
     setIsTypingCmd(false);
     setDone(false);
 
-    const lines = scenarios[idx].lines;
+    const scenario = scenarios.find((s) => s.id === id)!;
+    const lines = scenario.lines;
 
     const sleep = (ms: number) =>
       new Promise<void>((res, rej) => {
@@ -148,7 +150,7 @@ export default function TerminalDemo() {
   }, []);
 
   /* start first scenario on mount */
-  useEffect(() => { play(0); }, [play]);
+  useEffect(() => { play(scenarios[0].id); }, [play]);
 
   const renderLine = (line: Line, i: number) => {
     switch (line.type) {
@@ -186,62 +188,67 @@ export default function TerminalDemo() {
           See it in action
         </h2>
         <p className="text-zinc-400 text-center mb-8 max-w-xl mx-auto">
-          Watch AI agents find, qualify, and enrich leads in real time.
+          Watch autonomous agents use skills to complete real tasks.
         </p>
 
-        {/* scenario tabs */}
-        <div className="flex flex-wrap justify-center gap-2 mb-6">
-          {scenarios.map((s, i) => (
-            <button
-              key={i}
-              onClick={() => play(i)}
-              className={`text-xs sm:text-sm px-4 py-2 rounded-lg border transition cursor-pointer ${
-                i === activeIdx
-                  ? "bg-blue-600/20 border-blue-500/40 text-blue-400"
-                  : "bg-white/[0.02] border-white/5 text-zinc-500 hover:text-zinc-300 hover:border-white/10"
-              }`}
-            >
-              {s.title}
-            </button>
+        <Tabs value={activeId} onValueChange={(v) => play(v)} className="w-full">
+          <TabsList className="w-full justify-center bg-transparent gap-2 mb-6 flex-wrap">
+            {scenarios.map((s) => (
+              <TabsTrigger
+                key={s.id}
+                value={s.id}
+                className="text-xs sm:text-sm px-4 py-2 rounded-lg border border-white/5 bg-white/[0.02] text-zinc-500 hover:text-zinc-300 hover:border-white/10 data-[state=active]:bg-blue-600/20 data-[state=active]:border-blue-500/40 data-[state=active]:text-blue-400"
+              >
+                {s.title}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {scenarios.map((s) => (
+            <TabsContent key={s.id} value={s.id}>
+              {/* terminal window */}
+              <div className="rounded-xl border border-white/10 bg-[#0c0c0c] overflow-hidden shadow-2xl shadow-black/50">
+                {/* title bar */}
+                <div className="flex items-center gap-2 px-4 py-3 bg-white/[0.03] border-b border-white/5">
+                  <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                  <div className="w-3 h-3 rounded-full bg-green-500/80" />
+                  <span className="ml-3 text-xs text-zinc-600 font-mono">autofound — terminal</span>
+                </div>
+
+                {/* terminal body */}
+                <div
+                  ref={scrollRef}
+                  className="p-5 font-mono text-sm leading-relaxed h-[380px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10"
+                >
+                  {activeId === s.id && (
+                    <>
+                      {visibleLines.map(renderLine)}
+                      {isTypingCmd && (
+                        <div className="flex gap-2">
+                          <span className="text-emerald-400 shrink-0">$</span>
+                          <span className="text-zinc-200">
+                            {typingCmd}
+                            <span className="inline-block w-2 h-4 bg-white/70 ml-0.5 animate-pulse align-middle" />
+                          </span>
+                        </div>
+                      )}
+                      {done && (
+                        <div className="flex gap-2 mt-1">
+                          <span className="text-emerald-400 shrink-0">$</span>
+                          <span className="inline-block w-2 h-4 bg-white/70 animate-pulse align-middle" />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
           ))}
-        </div>
-
-        {/* terminal window */}
-        <div className="rounded-xl border border-white/10 bg-[#0c0c0c] overflow-hidden shadow-2xl shadow-black/50">
-          {/* title bar */}
-          <div className="flex items-center gap-2 px-4 py-3 bg-white/[0.03] border-b border-white/5">
-            <div className="w-3 h-3 rounded-full bg-red-500/80" />
-            <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-            <div className="w-3 h-3 rounded-full bg-green-500/80" />
-            <span className="ml-3 text-xs text-zinc-600 font-mono">autofound — lead search</span>
-          </div>
-
-          {/* terminal body */}
-          <div
-            ref={scrollRef}
-            className="p-5 font-mono text-sm leading-relaxed h-[380px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10"
-          >
-            {visibleLines.map(renderLine)}
-            {isTypingCmd && (
-              <div className="flex gap-2">
-                <span className="text-emerald-400 shrink-0">$</span>
-                <span className="text-zinc-200">
-                  {typingCmd}
-                  <span className="inline-block w-2 h-4 bg-white/70 ml-0.5 animate-pulse align-middle" />
-                </span>
-              </div>
-            )}
-            {done && (
-              <div className="flex gap-2 mt-1">
-                <span className="text-emerald-400 shrink-0">$</span>
-                <span className="inline-block w-2 h-4 bg-white/70 animate-pulse align-middle" />
-              </div>
-            )}
-          </div>
-        </div>
+        </Tabs>
 
         <p className="text-center text-xs text-zinc-600 mt-4">
-          Simulated demo · Real agents deliver actual qualified leads
+          Simulated demo &middot; Real agents execute tasks in isolated containers
         </p>
       </div>
     </section>
