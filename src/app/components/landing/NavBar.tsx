@@ -19,13 +19,13 @@ function MobileMenu() {
       </button>
       {open && (
         <div className="absolute top-16 left-0 right-0 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/5 p-4 flex flex-col gap-4 sm:hidden z-50">
-          <a href="#how" onClick={() => setOpen(false)} className="text-zinc-300 hover:text-white">How it works</a>
-          <a href="#skills" onClick={() => setOpen(false)} className="text-zinc-300 hover:text-white">Skills</a>
+          <a href="#use-cases" onClick={() => setOpen(false)} className="text-zinc-300 hover:text-white">Use Cases</a>
+          <a href="#how" onClick={() => setOpen(false)} className="text-zinc-300 hover:text-white">How It Works</a>
           <a href="#pricing" onClick={() => setOpen(false)} className="text-zinc-300 hover:text-white">Pricing</a>
           <a href="#faq" onClick={() => setOpen(false)} className="text-zinc-300 hover:text-white">FAQ</a>
           <div className="flex gap-3 pt-2 border-t border-white/10">
-            <Link href="/sign-in" className="text-sm text-zinc-400 hover:text-white">Sign in</Link>
-            <Link href="/sign-up" className="text-sm px-4 py-2 bg-blue-600 rounded-lg font-medium">Get started</Link>
+            <Link href="/sign-in" className="text-sm text-zinc-400 hover:text-white">Sign In</Link>
+            <Link href="/sign-up" className="text-sm px-4 py-2 bg-blue-600 rounded-lg font-medium">Start Free</Link>
           </div>
         </div>
       )}
@@ -41,17 +41,17 @@ export default function NavBar() {
           autofound<span className="text-blue-500">.ai</span>
         </span>
         <div className="hidden sm:flex gap-8 text-sm text-zinc-400">
-          <a href="#how" className="hover:text-white transition">How it works</a>
-          <a href="#skills" className="hover:text-white transition">Skills</a>
+          <a href="#use-cases" className="hover:text-white transition">Use Cases</a>
+          <a href="#how" className="hover:text-white transition">How It Works</a>
           <a href="#pricing" className="hover:text-white transition">Pricing</a>
           <a href="#faq" className="hover:text-white transition">FAQ</a>
         </div>
         <div className="hidden sm:flex gap-3">
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/sign-in">Sign in</Link>
+            <Link href="/sign-in">Sign In</Link>
           </Button>
           <Button size="sm" asChild>
-            <Link href="/sign-up">Get started</Link>
+            <Link href="/sign-up">Start Free</Link>
           </Button>
         </div>
         <MobileMenu />

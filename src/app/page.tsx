@@ -1,11 +1,11 @@
 import NavBar from "./components/landing/NavBar";
 import HeroSection from "./components/landing/HeroSection";
-import TechBar from "./components/landing/TechBar";
-import TerminalDemo from "./components/TerminalDemo";
+import SocialProof from "./components/landing/SocialProof";
+import UseCasesShowcase from "./components/landing/UseCasesShowcase";
 import HowItWorks from "./components/landing/HowItWorks";
-import SkillsShowcase from "./components/landing/SkillsShowcase";
-import AgentBuilderPreview from "./components/landing/AgentBuilderPreview";
-import Differentiators from "./components/landing/Differentiators";
+import ResultsShowcase from "./components/landing/ResultsShowcase";
+import AgentTeamPreview from "./components/landing/AgentTeamPreview";
+import WhyChooseUs from "./components/landing/WhyChooseUs";
 import PricingSection from "./components/landing/PricingSection";
 import FAQSection from "./components/landing/FAQSection";
 import FinalCTA from "./components/landing/FinalCTA";
@@ -16,12 +16,12 @@ export default function Home() {
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       <NavBar />
       <HeroSection />
-      <TechBar />
-      <TerminalDemo />
+      <SocialProof />
+      <UseCasesShowcase />
       <HowItWorks />
-      <SkillsShowcase />
-      <AgentBuilderPreview />
-      <Differentiators />
+      <ResultsShowcase />
+      <AgentTeamPreview />
+      <WhyChooseUs />
       <PricingSection />
       <FAQSection />
       <FinalCTA />

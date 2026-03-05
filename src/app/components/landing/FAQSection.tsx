@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Accordion,
   AccordionContent,
@@ -7,28 +9,32 @@ import {
 
 const faqs = [
   {
-    q: "How does Bring Your Own Key (BYOK) work?",
-    a: "You connect your own AI provider API keys (OpenAI, Anthropic, Google AI, etc.). Your keys are encrypted at rest and never logged. All usage flows directly between your agents and the AI provider — we never see your prompts or outputs.",
+    q: "Do I need to know how to code?",
+    a: "Not at all. You interact with your agents using plain English — just describe what you need done. There's no coding, no configuration files, and no technical setup required.",
   },
   {
-    q: "What are skills and how do they work?",
-    a: "Skills are modular tool packs that give your agents capabilities — web research, file management, code execution, pod compute, and more. Each skill comes with sandboxed permissions and tools. Snap them in when creating an agent, remove them anytime.",
+    q: "Is my data safe?",
+    a: "Absolutely. All data is encrypted at rest and in transit. Every agent runs in an isolated, secure environment. We follow industry-standard security practices and never share your data with third parties.",
   },
   {
-    q: "What is the heartbeat feature?",
-    a: "Heartbeat lets agents wake up on a schedule (every 30 minutes, hourly, etc.) to do proactive work without being prompted — monitoring dashboards, checking for updates, sending reports, or following up on tasks.",
+    q: "How fast can I get started?",
+    a: "You can have your first agent working in under 60 seconds. Sign up, describe your task, and your agent starts immediately. No onboarding calls, no training period.",
   },
   {
-    q: "How does isolated execution work?",
-    a: "Every agent run spins up a fresh, ephemeral container on Fly.io. There's no shared state between runs unless you explicitly use the Memory or File Management skills. This means maximum security and zero cross-contamination.",
+    q: "What can the agents actually do?",
+    a: "Your agents can handle content creation, sales outreach, lead research, competitive analysis, data entry, report generation, customer support, and much more. If it can be done on a computer, an agent can probably help.",
   },
   {
-    q: "Can agents communicate with each other?",
-    a: "Yes. Agents with the Communication skill can send messages, delegate tasks, request approvals, and escalate issues to other agents in your organization.",
+    q: "Will agents take actions without my approval?",
+    a: "You're always in control. You can set up approval workflows so agents check with you before taking important actions. You decide the level of autonomy for each agent.",
   },
   {
-    q: "What AI models are supported?",
-    a: "Any model accessible via API — OpenAI (GPT-4o, o1, o3), Anthropic (Claude Opus, Sonnet, Haiku), Google (Gemini), and more. With BYOK, you choose the model per agent.",
+    q: "What happens if I hit my agent limit?",
+    a: "You can upgrade your plan at any time to add more agents. Your existing agents and their work history are preserved when you upgrade.",
+  },
+  {
+    q: "Can I cancel anytime?",
+    a: "Yes, you can cancel or downgrade your plan at any time. There are no long-term contracts or cancellation fees. We also offer a 14-day money-back guarantee.",
   },
 ];
 
@@ -36,12 +42,14 @@ export default function FAQSection() {
   return (
     <section id="faq" className="py-24 px-6 border-t border-white/5">
       <div className="max-w-3xl mx-auto">
-        <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
-          Frequently asked questions
-        </h2>
-        <p className="text-zinc-400 text-center mb-14 max-w-xl mx-auto">
-          Everything you need to know about autofound.ai
-        </p>
+        <div className="text-center mb-16">
+          <h2 className="text-3xl sm:text-4xl font-bold">
+            Frequently asked <span className="text-gradient">questions</span>
+          </h2>
+          <p className="mt-4 text-zinc-400 max-w-xl mx-auto">
+            Everything you need to know about getting started.
+          </p>
+        </div>
         <Accordion type="single" collapsible className="space-y-2">
           {faqs.map((f, i) => (
             <AccordionItem

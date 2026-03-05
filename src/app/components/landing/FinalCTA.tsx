@@ -1,24 +1,26 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+"use client";
+
+import GradientMeshBackground from "./GradientMeshBackground";
+import WaitlistForm from "./WaitlistForm";
 
 export default function FinalCTA() {
   return (
-    <section className="py-24 px-6 border-t border-white/5">
-      <div className="max-w-2xl mx-auto text-center">
-        <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-          Your agents are waiting.
+    <section className="relative py-24 px-6 border-t border-white/5 overflow-hidden">
+      <GradientMeshBackground />
+      <div className="relative max-w-2xl mx-auto text-center">
+        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold">
+          Stop hiring.{" "}
+          <span className="text-gradient">Start deploying.</span>
         </h2>
-        <p className="text-zinc-400 mb-10">
-          Create your first autonomous agent in minutes. Free to start, no credit card required.
+        <p className="mt-6 text-zinc-400 max-w-lg mx-auto">
+          Join thousands of businesses using AI agents to get more done. Free to start, no credit card required.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button size="lg" asChild>
-            <Link href="/sign-up">Get started free</Link>
-          </Button>
-          <Button variant="outline" size="lg" asChild>
-            <Link href="/sign-in">Sign in</Link>
-          </Button>
+        <div className="mt-10">
+          <WaitlistForm variant="cta" />
         </div>
+        <p className="mt-4 text-sm text-zinc-600">
+          Free to start &middot; No coding required &middot; Cancel anytime
+        </p>
       </div>
     </section>
   );

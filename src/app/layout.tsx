@@ -5,22 +5,22 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 export const metadata: Metadata = {
-  title: "autofound.ai — Build Autonomous Agents at Scale",
+  title: "autofound.ai — Your AI Workforce That Never Sleeps",
   description:
-    "Create AI agents with custom skills, your own API keys, and isolated execution. The agent toolbox for developers and founders.",
+    "Hire AI agents that handle marketing, research, sales, and operations 24/7. No coding required.",
   openGraph: {
-    title: "autofound.ai — Build Autonomous Agents at Scale",
+    title: "autofound.ai — Your AI Workforce That Never Sleeps",
     description:
-      "Create AI agents with custom skills, your own API keys, and isolated execution.",
+      "Hire AI agents that handle marketing, research, sales, and operations 24/7. No coding required.",
     url: "https://autofound.ai",
     siteName: "autofound.ai",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "autofound.ai — Build Autonomous Agents at Scale",
+    title: "autofound.ai — Your AI Workforce That Never Sleeps",
     description:
-      "Create AI agents with custom skills, your own API keys, and isolated execution.",
+      "Hire AI agents that handle marketing, research, sales, and operations 24/7. No coding required.",
   },
 };
 
