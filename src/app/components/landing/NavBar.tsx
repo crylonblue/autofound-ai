@@ -23,6 +23,7 @@ function MobileMenu() {
           <a href="#how" onClick={() => setOpen(false)} className="text-zinc-300 hover:text-white">How It Works</a>
           <a href="#pricing" onClick={() => setOpen(false)} className="text-zinc-300 hover:text-white">Pricing</a>
           <a href="#faq" onClick={() => setOpen(false)} className="text-zinc-300 hover:text-white">FAQ</a>
+          <Link href="/demo-office" onClick={() => setOpen(false)} className="text-blue-400 hover:text-blue-300 font-medium">Office</Link>
           <div className="flex gap-3 pt-2 border-t border-white/10">
             <Link href="/sign-in" className="text-sm text-zinc-400 hover:text-white">Sign In</Link>
             <Link href="/sign-up" className="text-sm px-4 py-2 bg-blue-600 rounded-lg font-medium">Start Free</Link>
@@ -45,6 +46,7 @@ export default function NavBar() {
           <a href="#how" className="hover:text-white transition">How It Works</a>
           <a href="#pricing" className="hover:text-white transition">Pricing</a>
           <a href="#faq" className="hover:text-white transition">FAQ</a>
+          <Link href="/demo-office" className="text-blue-400 hover:text-blue-300 transition font-medium">Office</Link>
         </div>
         <div className="hidden sm:flex gap-3">
           <Button variant="ghost" size="sm" asChild>

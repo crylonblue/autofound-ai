@@ -11,6 +11,7 @@ import {
   Users,
   ListTodo,
   Settings,
+  Building2,
   Zap,
   Menu,
 } from "lucide-react";
@@ -20,6 +21,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/s
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/agents", label: "Agents", icon: Users },
+  { href: "/office", label: "Office", icon: Building2 },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

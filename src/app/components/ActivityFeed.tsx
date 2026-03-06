@@ -95,7 +95,7 @@ export default function ActivityFeed({ compact = false, limit = 20 }: ActivityFe
               onClick={() => setFilterAgent(filterAgent === agent._id ? null : agent._id)}
               className={filterAgent === agent._id ? "bg-blue-500/10 text-blue-400 hover:bg-blue-500/15 hover:text-blue-400" : "text-zinc-500"}
             >
-              <span>{agent.icon}</span>
+              <AgentAvatar icon={agent.icon} color={agent.color} size="sm" />
               {agent.name}
             </Button>
           ))}
@@ -116,7 +116,7 @@ export default function ActivityFeed({ compact = false, limit = 20 }: ActivityFe
             >
               {/* Agent icon */}
               <div className="relative flex-shrink-0">
-                <span className="text-lg">{activity.agentIcon}</span>
+                <AgentAvatar icon={activity.agentIcon} color={activity.agentColor ?? "#3b82f6"} size="sm" />
                 <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center ${tc.bg} ring-1 ring-[#111]`}>
                   <Icon className={`w-2 h-2 ${tc.color}`} />
                 </div>

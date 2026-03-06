@@ -8,12 +8,14 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 import { MODELS } from "@/lib/models";
 import { DEFAULT_SKILLS, type SkillPackKey } from "@/lib/skillPacks";
 import { SkillSelector } from "@/components/SkillSelector";
+import { ModelPicker } from "@/components/ModelPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type AgentForm = {
   name: string;
@@ -34,7 +36,7 @@ interface EditAgentDialogProps {
 
 export function EditAgentDialog({ open, onOpenChange, agentId, initialData }: EditAgentDialogProps) {
   const updateAgent = useMutation(api.agents.updateAgent);
-  const [form, setForm] = useState<AgentForm>(initialData ?? { name: "", role: "", icon: "🤖", color: "#3b82f6", systemPrompt: "", model: "claude-opus-4-6", skills: [...DEFAULT_SKILLS] });
+  const [form, setForm] = useState<AgentForm>(initialData ?? { name: "", role: "", icon: "dev", color: "#3b82f6", systemPrompt: "", model: "claude-opus-4-6", skills: [...DEFAULT_SKILLS] });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -67,24 +69,30 @@ export function EditAgentDialog({ open, onOpenChange, agentId, initialData }: Ed
         <DialogHeader>
           <DialogTitle>Edit Agent</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Name</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+
+        <Tabs defaultValue="general" className="w-full">
+          <TabsList className="w-full mb-4">
+            <TabsTrigger value="general" className="flex-1">General</TabsTrigger>
+            <TabsTrigger value="skills" className="flex-1">Skills</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="general" className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Name</Label>
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Role</Label>
+                <Input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} />
+              </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Role</Label>
-              <Input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Icon</Label>
-              <Input value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} className="text-center" />
+              <Label>Character Model</Label>
+              <ModelPicker value={form.icon} onChange={(id) => setForm({ ...form, icon: id })} />
             </div>
             <div className="space-y-1.5">
-              <Label>Model</Label>
+              <Label>LLM Model</Label>
               <Select value={form.model} onValueChange={(v) => setForm({ ...form, model: v })}>
                 <SelectTrigger>
                   <SelectValue />
@@ -94,19 +102,20 @@ export function EditAgentDialog({ open, onOpenChange, agentId, initialData }: Ed
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>System Prompt</Label>
-            <Textarea value={form.systemPrompt} onChange={(e) => setForm({ ...form, systemPrompt: e.target.value })} rows={4} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Skills</Label>
+            <div className="space-y-1.5">
+              <Label>System Prompt</Label>
+              <Textarea value={form.systemPrompt} onChange={(e) => setForm({ ...form, systemPrompt: e.target.value })} rows={4} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="skills" className="space-y-3">
             <SkillSelector selected={form.skills} onChange={(skills) => setForm({ ...form, skills })} />
-          </div>
-          <Button onClick={saveEdit} disabled={saving} className="w-full">
-            {saving && <Loader2 className="w-4 h-4 animate-spin" />} Save Changes
-          </Button>
-        </div>
+          </TabsContent>
+        </Tabs>
+
+        <Button onClick={saveEdit} disabled={saving} className="w-full">
+          {saving && <Loader2 className="w-4 h-4 animate-spin" />} Save Changes
+        </Button>
       </DialogContent>
     </Dialog>
   );

@@ -13,6 +13,12 @@ import { MODELS } from "@/lib/models";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { AgentAvatar } from "@/components/AgentAvatar";
+import dynamic from "next/dynamic";
+
+const ModelPreviewCanvas = dynamic(
+  () => import("@/components/ModelPicker").then((m) => ({ default: m.ModelPreviewCanvas })),
+  { ssr: false }
+);
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -142,17 +148,15 @@ export default function AgentsPage() {
       {/* Agent Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((agent: any) => (
-          <Card key={agent._id} className="hover:border-white/20 transition-colors group">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <AgentAvatar icon={agent.icon} color={agent.color} />
-                  <div>
-                    <h3 className="font-semibold text-sm">{agent.name}</h3>
-                    <p className="text-xs text-muted-foreground">{agent.role}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Card key={agent._id} className="hover:border-white/20 transition-colors group py-0 gap-0 overflow-hidden">
+            <CardContent className="p-0">
+              {/* 3D Model Preview */}
+              <div className="relative h-36 bg-[#12121e] rounded-t-xl overflow-hidden">
+                <ModelPreviewCanvas
+                  modelId={agent.icon}
+                  className="w-full h-full"
+                />
+                <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(agent)}>
@@ -178,6 +182,12 @@ export default function AgentsPage() {
                     <TooltipContent>Remove</TooltipContent>
                   </Tooltip>
                 </div>
+              </div>
+
+              <div className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="font-semibold text-sm">{agent.name}</h3>
+                <span className="text-xs text-muted-foreground">· {agent.role}</span>
               </div>
               <div className="flex items-center gap-2 mb-3">
                 <div className={`w-2 h-2 rounded-full ${agent.status === "active" ? "bg-emerald-400" : agent.status === "paused" ? "bg-amber-400" : "bg-zinc-600"}`} />
@@ -242,6 +252,7 @@ export default function AgentsPage() {
                     Telegram
                   </Button>
                 )}
+              </div>
               </div>
             </CardContent>
           </Card>

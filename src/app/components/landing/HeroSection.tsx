@@ -1,35 +1,40 @@
 "use client";
 
-import Image from "next/image";
+import dynamic from "next/dynamic";
 import GradientMeshBackground from "./GradientMeshBackground";
 import DotGridBackground from "./DotGridBackground";
 import WaitlistForm from "./WaitlistForm";
 
+const ModelPreviewCanvas = dynamic(
+  () => import("@/components/ModelPicker").then((m) => ({ default: m.ModelPreviewCanvas })),
+  { ssr: false }
+);
+
 const agents = [
   {
     name: "Marketing Agent",
-    img: "/models/agent-marketing.png",
+    modelId: "marketing",
     stat: "47 posts published",
     delay: "stagger-1",
     float: "animate-float",
   },
   {
     name: "Sales Agent",
-    img: "/models/agent-sales.png",
+    modelId: "sales",
     stat: "200 leads researched",
     delay: "stagger-2",
     float: "animate-float-delayed",
   },
   {
     name: "CEO Agent",
-    img: "/models/agent-ceo.png",
+    modelId: "ceo",
     stat: "15 reports generated",
     delay: "stagger-3",
     float: "animate-float-slow",
   },
   {
     name: "Dev Agent",
-    img: "/models/agent-dev.png",
+    modelId: "dev",
     stat: "340 tickets resolved",
     delay: "stagger-4",
     float: "animate-float",
@@ -82,13 +87,10 @@ export default function HeroSection() {
               key={agent.name}
               className={`glass-card rounded-2xl p-4 text-center glow-blue animate-fade-in-up ${agent.delay} ${agent.float}`}
             >
-              <div className="w-16 h-16 mx-auto mb-3 rounded-full overflow-hidden bg-white/5 border border-white/10">
-                <Image
-                  src={agent.img}
-                  alt={agent.name}
-                  width={64}
-                  height={64}
-                  className="w-full h-full object-cover"
+              <div className="w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-white/5 border border-white/10">
+                <ModelPreviewCanvas
+                  modelId={agent.modelId}
+                  className="w-full h-full"
                 />
               </div>
               <p className="text-sm font-medium text-white">{agent.name}</p>

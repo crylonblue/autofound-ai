@@ -159,6 +159,77 @@ export const updateAgent = mutation({
   },
 });
 
+// Live activity data for the 3D office view
+export const getOfficeActivity = query({
+  args: { clerkId: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+    if (!user) return {};
+
+    const agents = await ctx.db
+      .query("agents")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+
+    const result: Record<string, {
+      currentTask: { title: string; status: string; progress?: string } | null;
+      lastActivity: { type: string; summary: string; createdAt: number } | null;
+      heartbeat: { status: string; lastRun?: number; runCount: number } | null;
+    }> = {};
+
+    for (const agent of agents) {
+      // Find current running/pending task
+      const tasks = await ctx.db
+        .query("tasks")
+        .withIndex("by_agent", (q) => q.eq("agentId", agent._id))
+        .order("desc")
+        .take(5);
+      const runningTask = tasks.find((t) => t.status === "running" || t.status === "pending");
+
+      // Get progress from latest run if task is running
+      let progress: string | undefined;
+      if (runningTask) {
+        const run = await ctx.db
+          .query("agentRuns")
+          .withIndex("by_task", (q) => q.eq("taskId", runningTask._id))
+          .order("desc")
+          .first();
+        if (run?.progressText) progress = run.progressText;
+      }
+
+      // Latest activity
+      const latestActivity = await ctx.db
+        .query("activities")
+        .withIndex("by_agent", (q) => q.eq("agentId", agent._id))
+        .order("desc")
+        .first();
+
+      // Heartbeat
+      const heartbeat = await ctx.db
+        .query("heartbeats")
+        .withIndex("by_agent", (q) => q.eq("agentId", agent._id))
+        .first();
+
+      result[agent._id as string] = {
+        currentTask: runningTask
+          ? { title: runningTask.title, status: runningTask.status, progress }
+          : null,
+        lastActivity: latestActivity
+          ? { type: latestActivity.type, summary: latestActivity.summary, createdAt: latestActivity.createdAt }
+          : null,
+        heartbeat: heartbeat
+          ? { status: heartbeat.status, lastRun: heartbeat.lastRun, runCount: heartbeat.runCount }
+          : null,
+      };
+    }
+
+    return result;
+  },
+});
+
 export const deleteAgent = mutation({
   args: { agentId: v.id("agents") },
   handler: async (ctx, args) => {
